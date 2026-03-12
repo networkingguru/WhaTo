@@ -20,19 +20,24 @@ export default function SwipeScreen() {
     if (topic !== 'food') return;
 
     (async () => {
-      const { status } = await Location.requestForegroundPermissionsAsync();
-      if (status !== 'granted') {
-        setLocationError('Location permission is needed to find restaurants near you.');
-        setLocationLoading(false);
-        return;
-      }
+      try {
+        const { status } = await Location.requestForegroundPermissionsAsync();
+        if (status !== 'granted') {
+          setLocationError('Location permission is needed to find restaurants near you.');
+          setLocationLoading(false);
+          return;
+        }
 
-      const loc = await Location.getCurrentPositionAsync({});
-      setLocation({
-        latitude: loc.coords.latitude,
-        longitude: loc.coords.longitude,
-      });
-      setLocationLoading(false);
+        const loc = await Location.getCurrentPositionAsync({});
+        setLocation({
+          latitude: loc.coords.latitude,
+          longitude: loc.coords.longitude,
+        });
+      } catch {
+        setLocationError('Could not determine your location. Please try again.');
+      } finally {
+        setLocationLoading(false);
+      }
     })();
   }, [topic]);
 

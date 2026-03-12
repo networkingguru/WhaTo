@@ -16,7 +16,12 @@ export default function ResultScreen() {
   }>();
   const router = useRouter();
 
-  const details: string[] = params.details ? JSON.parse(params.details) : [];
+  let details: string[] = [];
+  try {
+    details = params.details ? JSON.parse(params.details) : [];
+  } catch {
+    details = [];
+  }
   const topicLabels: Record<string, string> = {
     food: 'eat at',
     movie: 'watch',
