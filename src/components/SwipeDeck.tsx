@@ -1,0 +1,171 @@
+import React, { useCallback, useEffect, useState } from 'react';
+import { View, StyleSheet, Dimensions, Text } from 'react-native';
+import { Gesture, GestureDetector } from 'react-native-gesture-handler';
+import Animated, {
+  useSharedValue,
+  useAnimatedStyle,
+  withSpring,
+  withTiming,
+  runOnJS,
+  interpolate,
+  Extrapolation,
+} from 'react-native-reanimated';
+import { CardItem } from '../providers/types';
+import { SwipeCard } from './SwipeCard';
+import { colors, spacing, typography } from '../theme';
+
+const { width: SCREEN_WIDTH } = Dimensions.get('window');
+const SWIPE_THRESHOLD = SCREEN_WIDTH * 0.3;
+
+interface SwipeDeckProps {
+  cards: CardItem[];
+  onSwipeRight: (card: CardItem) => void;
+  onSwipeLeft: (card: CardItem) => void;
+  onEmpty: () => void;
+}
+
+export function SwipeDeck({ cards, onSwipeRight, onSwipeLeft, onEmpty }: SwipeDeckProps) {
+  const [currentIndex, setCurrentIndex] = useState(0);
+  const translateX = useSharedValue(0);
+  const translateY = useSharedValue(0);
+
+  const currentCard = cards[currentIndex];
+  const nextCard = cards[currentIndex + 1];
+
+  useEffect(() => {
+    if (currentIndex >= cards.length && cards.length > 0) {
+      onEmpty();
+    }
+  }, [currentIndex, cards.length, onEmpty]);
+
+  useEffect(() => {
+    if (cards.length === 0) {
+      onEmpty();
+    }
+  }, [cards.length, onEmpty]);
+
+  const advanceCard = useCallback(
+    (direction: 'left' | 'right') => {
+      const card = cards[currentIndex];
+      if (!card) return;
+
+      if (direction === 'right') {
+        onSwipeRight(card);
+      } else {
+        onSwipeLeft(card);
+      }
+      setCurrentIndex((i) => i + 1);
+      translateX.value = 0;
+      translateY.value = 0;
+    },
+    [currentIndex, cards, onSwipeRight, onSwipeLeft, translateX, translateY]
+  );
+
+  const gesture = Gesture.Pan()
+    .onUpdate((event) => {
+      translateX.value = event.translationX;
+      translateY.value = event.translationY;
+    })
+    .onEnd((event) => {
+      if (Math.abs(event.translationX) > SWIPE_THRESHOLD) {
+        const direction = event.translationX > 0 ? 'right' : 'left';
+        translateX.value = withTiming(
+          direction === 'right' ? SCREEN_WIDTH : -SCREEN_WIDTH,
+          { duration: 200 },
+          () => runOnJS(advanceCard)(direction)
+        );
+      } else {
+        translateX.value = withSpring(0);
+        translateY.value = withSpring(0);
+      }
+    });
+
+  const animatedStyle = useAnimatedStyle(() => ({
+    transform: [
+      { translateX: translateX.value },
+      { translateY: translateY.value },
+      {
+        rotate: `${interpolate(
+          translateX.value,
+          [-SCREEN_WIDTH, 0, SCREEN_WIDTH],
+          [-15, 0, 15]
+        )}deg`,
+      },
+    ],
+  }));
+
+  const overlayLeftStyle = useAnimatedStyle(() => ({
+    opacity: interpolate(translateX.value, [-SWIPE_THRESHOLD, 0], [1, 0], Extrapolation.CLAMP),
+  }));
+
+  const overlayRightStyle = useAnimatedStyle(() => ({
+    opacity: interpolate(translateX.value, [0, SWIPE_THRESHOLD], [0, 1], Extrapolation.CLAMP),
+  }));
+
+  if (!currentCard) {
+    return (
+      <View style={styles.empty}>
+        <Text style={typography.body}>No more cards!</Text>
+      </View>
+    );
+  }
+
+  return (
+    <View style={styles.container}>
+      {nextCard && (
+        <View style={[styles.cardContainer, { zIndex: 0 }]}>
+          <SwipeCard card={nextCard} />
+        </View>
+      )}
+
+      <GestureDetector gesture={gesture}>
+        <Animated.View style={[styles.cardContainer, { zIndex: 1 }, animatedStyle]}>
+          <SwipeCard card={currentCard} />
+          <Animated.View style={[styles.overlay, styles.overlayLeft, overlayLeftStyle]}>
+            <Text style={styles.overlayText}>NOPE</Text>
+          </Animated.View>
+          <Animated.View style={[styles.overlay, styles.overlayRight, overlayRightStyle]}>
+            <Text style={styles.overlayText}>YES!</Text>
+          </Animated.View>
+        </Animated.View>
+      </GestureDetector>
+    </View>
+  );
+}
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  cardContainer: {
+    position: 'absolute',
+  },
+  empty: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  overlay: {
+    position: 'absolute',
+    top: spacing.lg,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    borderRadius: 8,
+    borderWidth: 3,
+  },
+  overlayLeft: {
+    right: spacing.lg,
+    borderColor: '#FF4444',
+  },
+  overlayRight: {
+    left: spacing.lg,
+    borderColor: colors.success,
+  },
+  overlayText: {
+    fontSize: 24,
+    fontWeight: '800',
+    color: colors.text,
+  },
+});
