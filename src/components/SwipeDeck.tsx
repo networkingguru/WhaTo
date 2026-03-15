@@ -125,10 +125,10 @@ export function SwipeDeck({ cards, onSwipeRight, onSwipeLeft, onEmpty }: SwipeDe
         <Animated.View style={[styles.cardContainer, { zIndex: 1 }, animatedStyle]}>
           <SwipeCard card={currentCard} />
           <Animated.View style={[styles.overlay, styles.overlayLeft, overlayLeftStyle]}>
-            <Text style={styles.overlayText}>NOPE</Text>
+            <Text style={styles.overlayLeftText}>NOPE</Text>
           </Animated.View>
           <Animated.View style={[styles.overlay, styles.overlayRight, overlayRightStyle]}>
-            <Text style={styles.overlayText}>YES!</Text>
+            <Text style={styles.overlayRightText}>YES!</Text>
           </Animated.View>
         </Animated.View>
       </GestureDetector>
@@ -170,9 +170,14 @@ const styles = StyleSheet.create({
     left: spacing.lg,
     borderColor: colors.success,
   },
-  overlayText: {
+  overlayLeftText: {
     fontSize: 24,
     fontWeight: '800',
-    color: colors.text,
+    color: '#FF4444',
+  },
+  overlayRightText: {
+    fontSize: 24,
+    fontWeight: '800',
+    color: '#4CAF50',  // colors.success
   },
 });
