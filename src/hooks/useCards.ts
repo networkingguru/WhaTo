@@ -19,7 +19,7 @@ interface UseCardsResult {
 export function useCards(
   topic: Topic,
   location?: { latitude: number; longitude: number },
-  options?: { enabled?: boolean }
+  options?: { enabled?: boolean; radius?: number }
 ): UseCardsResult {
   const enabled = options?.enabled ?? true;
   const [cards, setCards] = useState<CardItem[]>([]);
@@ -40,11 +40,16 @@ export function useCards(
         const fetchOptions: FetchOptions = {
           latitude: location?.latitude,
           longitude: location?.longitude,
+          radius: options?.radius,
         };
         const result = await provider.fetchCards(fetchOptions);
 
         if (!cancelled) {
-          setCards(result);
+          if (result.length === 0) {
+            setError('No results found. Please try again later.');
+          } else {
+            setCards(result);
+          }
           setLoading(false);
         }
       } catch (err) {
@@ -57,7 +62,7 @@ export function useCards(
 
     load();
     return () => { cancelled = true; };
-  }, [topic, location?.latitude, location?.longitude, enabled]);
+  }, [topic, location?.latitude, location?.longitude, enabled, options?.radius]);
 
   return { cards, loading, error };
 }

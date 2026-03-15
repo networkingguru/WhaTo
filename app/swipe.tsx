@@ -4,21 +4,37 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import * as Location from 'expo-location';
 import { SwipeDeck } from '../src/components/SwipeDeck';
+import { RadiusSelector } from '../src/components/RadiusSelector';
 import { useCards } from '../src/hooks/useCards';
 import { Topic, CardItem } from '../src/providers/types';
 import { colors, spacing, typography } from '../src/theme';
 import { topicDisplayNames } from '../src/utils/topicLabels';
 
 export default function SwipeScreen() {
-  const { topic } = useLocalSearchParams<{ topic: Topic }>();
+  const params = useLocalSearchParams<{ topic: string; pickedLatitude?: string; pickedLongitude?: string }>();
+  const topic = params.topic as Topic;
   const router = useRouter();
+  const [radius, setRadius] = useState(5);
   const [location, setLocation] = useState<{ latitude: number; longitude: number } | undefined>();
   const [locationLoading, setLocationLoading] = useState(topic === 'food');
   const [locationError, setLocationError] = useState<string | null>(null);
 
-  // Request location for food topic
+  // Use picked location from location-picker if available
+  React.useEffect(() => {
+    if (params.pickedLatitude && params.pickedLongitude) {
+      const lat = parseFloat(params.pickedLatitude);
+      const lng = parseFloat(params.pickedLongitude);
+      if (!isNaN(lat) && !isNaN(lng)) {
+        setLocation({ latitude: lat, longitude: lng });
+        setLocationLoading(false);
+      }
+    }
+  }, [params.pickedLatitude, params.pickedLongitude]);
+
+  // Request location for food topic (skip if picked location is available)
   React.useEffect(() => {
     if (topic !== 'food') return;
+    if (params.pickedLatitude && params.pickedLongitude) return;
 
     (async () => {
       try {
@@ -40,14 +56,14 @@ export default function SwipeScreen() {
         setLocationLoading(false);
       }
     })();
-  }, [topic]);
+  }, [topic, params.pickedLatitude, params.pickedLongitude]);
 
   const needsLocation = topic === 'food';
   const locationReady = !needsLocation || location != null;
   const { cards, loading, error } = useCards(
     topic as Topic,
     needsLocation ? location : undefined,
-    { enabled: locationReady }
+    { enabled: locationReady, radius }
   );
 
   const handleSwipeRight = useCallback(
@@ -110,6 +126,17 @@ export default function SwipeScreen() {
         <Text style={styles.header}>{topicDisplayNames[topic as Topic] ?? 'Swipe'}</Text>
         <View style={{ width: 32 }} />
       </View>
+      {topic === 'food' && (
+        <>
+          <RadiusSelector selected={radius} onSelect={setRadius} />
+          <Pressable
+            onPress={() => router.push({ pathname: '/location-picker', params: { topic } })}
+            style={styles.pickLocationButton}
+          >
+            <Text style={styles.pickLocationText}>Pick location</Text>
+          </Pressable>
+        </>
+      )}
       <SwipeDeck
         cards={cards}
         onSwipeRight={handleSwipeRight}
@@ -156,5 +183,16 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingHorizontal: spacing.xl,
     paddingBottom: spacing.lg,
+  },
+  pickLocationButton: {
+    alignSelf: 'center',
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.md,
+    marginBottom: spacing.sm,
+  },
+  pickLocationText: {
+    ...typography.caption,
+    color: colors.primary,
+    textDecorationLine: 'underline' as const,
   },
 });
