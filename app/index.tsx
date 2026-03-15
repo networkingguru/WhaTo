@@ -16,6 +16,9 @@ import { movieProvider } from '../src/providers/movieProvider';
 import { showProvider } from '../src/providers/showProvider';
 import { restaurantProvider } from '../src/providers/restaurantProvider';
 import * as Location from 'expo-location';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+
+const DISPLAY_NAME_KEY = 'whato_display_name';
 
 export default function HomeScreen() {
   const router = useRouter();
@@ -27,30 +30,33 @@ export default function HomeScreen() {
 
   const isGroupMode = mode === 'group';
 
-  // Pre-populate display name from device name (e.g., "Brian's iPhone" → "Brian")
+  // Load saved name, or fall back to extracting from device name
   useEffect(() => {
-    const devName = Device.deviceName;
-    if (devName && !displayName) {
-      const match = devName.match(/^(.+?)[''\u2019]s\s/i);
-      if (match) {
-        const candidate = match[1].trim();
-        // Only use it if it looks like a real name:
-        // - all letters (allow hyphens/spaces for compound names)
-        // - not a common non-name device word
-        // - reasonable length (2-20 chars)
-        const NON_NAMES = [
-          'my', 'the', 'this', 'new', 'old', 'red', 'blue', 'big', 'dad', 'mom',
-          'work', 'home', 'test', 'guest', 'admin', 'user', 'phone', 'device',
-          'iphone', 'ipad', 'mac', 'macbook', 'pixel', 'samsung', 'galaxy',
-        ];
-        const isAllLetters = /^[a-zA-Z][a-zA-Z \-']{0,19}$/.test(candidate);
-        const isNotCommonWord = !NON_NAMES.includes(candidate.toLowerCase());
-        const isReasonableLength = candidate.length >= 2 && candidate.length <= 20;
-        if (isAllLetters && isNotCommonWord && isReasonableLength) {
-          setDisplayName(candidate);
+    (async () => {
+      const saved = await AsyncStorage.getItem(DISPLAY_NAME_KEY);
+      if (saved) {
+        setDisplayName(saved);
+        return;
+      }
+      const devName = Device.deviceName;
+      if (devName) {
+        const match = devName.match(/^(.+?)[''\u2019]s\s/i);
+        if (match) {
+          const candidate = match[1].trim();
+          const NON_NAMES = [
+            'my', 'the', 'this', 'new', 'old', 'red', 'blue', 'big', 'dad', 'mom',
+            'work', 'home', 'test', 'guest', 'admin', 'user', 'phone', 'device',
+            'iphone', 'ipad', 'mac', 'macbook', 'pixel', 'samsung', 'galaxy',
+          ];
+          const isAllLetters = /^[a-zA-Z][a-zA-Z \-']{0,19}$/.test(candidate);
+          const isNotCommonWord = !NON_NAMES.includes(candidate.toLowerCase());
+          const isReasonableLength = candidate.length >= 2 && candidate.length <= 20;
+          if (isAllLetters && isNotCommonWord && isReasonableLength) {
+            setDisplayName(candidate);
+          }
         }
       }
-    }
+    })();
   }, []);
 
   function handleTopicPress(topic: Topic) {
@@ -101,7 +107,9 @@ export default function HomeScreen() {
         ? { latitude: fetchOptions.latitude, longitude: fetchOptions.longitude!, radiusMiles: 5 }
         : undefined;
 
-      await createSession(code, groupTopic, deviceId, displayName.trim(), cards, location);
+      const trimmedName = displayName.trim();
+      await AsyncStorage.setItem(DISPLAY_NAME_KEY, trimmedName);
+      await createSession(code, groupTopic, deviceId, trimmedName, cards, location);
       resetToSolo();
       router.push({ pathname: '/lobby', params: { code, topic: groupTopic, isCreator: 'true' } });
     } catch (err) {
