@@ -9,6 +9,7 @@ import { Topic } from '../src/providers/types';
 import {
   listenToSession,
   startSession,
+  endSession,
   SessionData,
 } from '../src/services/sessionService';
 
@@ -54,6 +55,13 @@ export default function LobbyScreen() {
     });
   }, [code, router]);
 
+  const handleCancel = useCallback(async () => {
+    if (code && isCreator === 'true') {
+      try { await endSession(code); } catch {}
+    }
+    router.replace('/');
+  }, [code, isCreator, router]);
+
   const participants = session?.participants ? Object.values(session.participants) : [];
 
   return (
@@ -93,6 +101,11 @@ export default function LobbyScreen() {
         {isCreator !== 'true' && (
           <Text style={styles.waitingText}>Waiting for host to start...</Text>
         )}
+        <TouchableOpacity style={styles.cancelButton} onPress={handleCancel}>
+          <Text style={styles.cancelText}>
+            {isCreator === 'true' ? 'Cancel Session' : 'Leave Session'}
+          </Text>
+        </TouchableOpacity>
       </View>
     </SafeAreaView>
   );
@@ -164,5 +177,15 @@ const styles = StyleSheet.create({
     ...typography.body,
     color: colors.textSecondary,
     textAlign: 'center',
+  },
+  cancelButton: {
+    paddingVertical: spacing.md,
+    borderRadius: 16,
+    alignItems: 'center',
+  },
+  cancelText: {
+    ...typography.body,
+    color: colors.danger,
+    fontWeight: '600',
   },
 });

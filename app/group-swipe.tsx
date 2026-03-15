@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { View, Text, StyleSheet, ActivityIndicator } from 'react-native';
+import { View, Text, StyleSheet, ActivityIndicator, TouchableOpacity, Alert } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { SwipeDeck } from '../src/components/SwipeDeck';
@@ -10,6 +10,7 @@ import {
   listenToSession,
   recordSwipe,
   markCompleted,
+  endSession,
   SessionData,
 } from '../src/services/sessionService';
 import { getDeviceId } from '../src/services/deviceId';
@@ -69,6 +70,25 @@ export default function GroupSwipeScreen() {
     }
   }, [code, deviceId]);
 
+  const isCreator = session?.createdBy === deviceId;
+
+  const handleEndSession = useCallback(() => {
+    Alert.alert('End Session?', 'This will end the session for everyone and show results.', [
+      { text: 'Cancel', style: 'cancel' },
+      {
+        text: 'End Session',
+        style: 'destructive',
+        onPress: async () => {
+          if (code) await endSession(code);
+        },
+      },
+    ]);
+  }, [code]);
+
+  const handleLeave = useCallback(() => {
+    router.replace('/');
+  }, [router]);
+
   if (!session || cards.length === 0) {
     return (
       <SafeAreaView style={styles.center}>
@@ -83,6 +103,9 @@ export default function GroupSwipeScreen() {
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.headerRow}>
+        <TouchableOpacity onPress={isCreator ? handleEndSession : handleLeave} hitSlop={12}>
+          <Text style={styles.exitText}>{isCreator ? 'End' : 'Leave'}</Text>
+        </TouchableOpacity>
         <Text style={styles.header}>
           {topicDisplayNames[session.topic] ?? 'Swipe'}
         </Text>
@@ -122,6 +145,11 @@ const styles = StyleSheet.create({
   },
   header: {
     ...typography.subtitle,
+  },
+  exitText: {
+    ...typography.caption,
+    color: colors.danger,
+    fontWeight: '600',
   },
   code: {
     ...typography.caption,
