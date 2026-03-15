@@ -1,5 +1,5 @@
 import React, { useCallback, useState } from 'react';
-import { View, Text, StyleSheet, ActivityIndicator } from 'react-native';
+import { View, Text, StyleSheet, ActivityIndicator, Pressable } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import * as Location from 'expo-location';
@@ -7,6 +7,7 @@ import { SwipeDeck } from '../src/components/SwipeDeck';
 import { useCards } from '../src/hooks/useCards';
 import { Topic, CardItem } from '../src/providers/types';
 import { colors, spacing, typography } from '../src/theme';
+import { topicDisplayNames } from '../src/utils/topicLabels';
 
 export default function SwipeScreen() {
   const { topic } = useLocalSearchParams<{ topic: Topic }>();
@@ -72,8 +73,8 @@ export default function SwipeScreen() {
   }, []);
 
   const handleEmpty = useCallback(() => {
-    // Could load more cards in the future; for now just show empty state
-  }, []);
+    router.replace('/');
+  }, [router]);
 
   const isLoading = loading || locationLoading;
   const displayError = error || locationError;
@@ -93,19 +94,22 @@ export default function SwipeScreen() {
     return (
       <SafeAreaView style={styles.center}>
         <Text style={[typography.body, { color: colors.primary }]}>{displayError}</Text>
+        <Pressable onPress={() => router.replace('/')} style={{ marginTop: spacing.lg }}>
+          <Text style={[typography.caption, { color: colors.primary }]}>← Back to home</Text>
+        </Pressable>
       </SafeAreaView>
     );
   }
 
-  const topicLabels: Record<string, string> = {
-    food: 'Restaurants',
-    movie: 'Movies',
-    show: 'Shows',
-  };
-
   return (
     <SafeAreaView style={styles.container}>
-      <Text style={styles.header}>{topicLabels[topic as string] ?? 'Swipe'}</Text>
+      <View style={styles.headerRow}>
+        <Pressable onPress={() => router.replace('/')} hitSlop={12}>
+          <Text style={styles.backButton}>←</Text>
+        </Pressable>
+        <Text style={styles.header}>{topicDisplayNames[topic as Topic] ?? 'Swipe'}</Text>
+        <View style={{ width: 32 }} />
+      </View>
       <SwipeDeck
         cards={cards}
         onSwipeRight={handleSwipeRight}
@@ -131,10 +135,21 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     backgroundColor: colors.background,
   },
+  headerRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.md,
+  },
   header: {
     ...typography.subtitle,
     textAlign: 'center',
-    paddingVertical: spacing.md,
+  },
+  backButton: {
+    ...typography.subtitle,
+    color: colors.primary,
+    fontSize: 24,
   },
   hints: {
     flexDirection: 'row',

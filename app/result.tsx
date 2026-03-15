@@ -25,7 +25,7 @@ export default function ResultScreen() {
   const topicLabels: Record<string, string> = {
     food: 'eat at',
     movie: 'watch',
-    show: 'watch',
+    show: 'stream',
   };
   const verb = topicLabels[params.topic] ?? 'go with';
 
