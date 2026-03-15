@@ -1,18 +1,33 @@
 import React from 'react';
 import { TouchableOpacity, Text, StyleSheet } from 'react-native';
+import { ForkKnife, FilmSlate, Television } from 'phosphor-react-native';
 import { colors, spacing, typography, cardStyle } from '../theme';
+
+const ICON_MAP: Record<string, React.ComponentType<any>> = {
+  ForkKnife,
+  FilmSlate,
+  Television,
+};
 
 interface TopicButtonProps {
   label: string;
-  emoji: string;
+  color: string;
+  icon: string;
   onPress: () => void;
 }
 
-export function TopicButton({ label, emoji, onPress }: TopicButtonProps) {
+export function TopicButton({ label, color, icon, onPress }: TopicButtonProps) {
+  const IconComponent = ICON_MAP[icon];
   return (
-    <TouchableOpacity style={styles.button} onPress={onPress} activeOpacity={0.8}>
-      <Text style={styles.emoji}>{emoji}</Text>
-      <Text style={styles.label}>{label}</Text>
+    <TouchableOpacity
+      style={[styles.button, { borderLeftColor: color, borderLeftWidth: 4 }]}
+      onPress={onPress}
+      activeOpacity={0.8}
+    >
+      {IconComponent && (
+        <IconComponent size={28} color={color} weight="fill" style={{ marginRight: 12 }} />
+      )}
+      <Text style={[styles.label, { color }]}>{label}</Text>
     </TouchableOpacity>
   );
 }
@@ -26,12 +41,13 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: spacing.md,
     width: '100%',
-  },
-  emoji: {
-    fontSize: 48,
-    marginBottom: spacing.sm,
+    borderRadius: 24,
+    flexDirection: 'row',
+    justifyContent: 'center',
   },
   label: {
     ...typography.subtitle,
+    fontWeight: '700',
+    fontSize: 22,
   },
 });
