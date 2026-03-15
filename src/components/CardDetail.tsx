@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useRef } from 'react';
 import {
   View,
   Text,
@@ -9,6 +9,7 @@ import {
   ScrollView,
   Linking,
   Dimensions,
+  PanResponder,
 } from 'react-native';
 import { colors, spacing, typography } from '../theme';
 import { CardItem, Topic } from '../providers/types';
@@ -67,6 +68,15 @@ function getActionButtons(card: CardItem, topic: Topic): { label: string; url: s
 }
 
 export function CardDetail({ card, visible, onClose, topic }: CardDetailProps) {
+  const panResponder = useRef(
+    PanResponder.create({
+      onMoveShouldSetPanResponder: (_, g) => g.dy > 10 && Math.abs(g.dy) > Math.abs(g.dx),
+      onPanResponderRelease: (_, g) => {
+        if (g.dy > 80) onClose();
+      },
+    })
+  ).current;
+
   if (!visible) return null;
 
   const overview = card.meta?.overview as string | undefined;
@@ -74,7 +84,7 @@ export function CardDetail({ card, visible, onClose, topic }: CardDetailProps) {
 
   return (
     <Modal visible={visible} transparent animationType="slide">
-      <View style={styles.backdrop}>
+      <View style={styles.backdrop} {...panResponder.panHandlers}>
         <View style={styles.container}>
           <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scroll}>
             {card.imageUrl && (

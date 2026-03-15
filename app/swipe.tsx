@@ -5,6 +5,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import * as Location from 'expo-location';
 import { SwipeDeck } from '../src/components/SwipeDeck';
 import { CardDetail } from '../src/components/CardDetail';
+import { SearchOptions, FoodFilters, MediaFilters } from '../src/components/SearchOptions';
 import { RadiusSelector } from '../src/components/RadiusSelector';
 import { useCards } from '../src/hooks/useCards';
 import { Topic, CardItem } from '../src/providers/types';
@@ -17,9 +18,21 @@ export default function SwipeScreen() {
   const router = useRouter();
   const [radius, setRadius] = useState(5);
   const [detailCard, setDetailCard] = useState<CardItem | null>(null);
+  const [optionsVisible, setOptionsVisible] = useState(false);
   const [location, setLocation] = useState<{ latitude: number; longitude: number } | undefined>();
   const [locationLoading, setLocationLoading] = useState(topic === 'food');
   const [locationError, setLocationError] = useState<string | null>(null);
+
+  // Filter state
+  const [foodFilters, setFoodFilters] = useState<FoodFilters>({
+    openNow: true,
+    categories: [],
+    sortBy: 'best_match',
+  });
+  const [mediaFilters, setMediaFilters] = useState<MediaFilters>({
+    genreIds: [],
+    sortTmdb: 'popularity',
+  });
 
   // Use picked location from location-picker if available
   React.useEffect(() => {
@@ -65,7 +78,20 @@ export default function SwipeScreen() {
   const { cards, loading, error } = useCards(
     topic as Topic,
     needsLocation ? location : undefined,
-    { enabled: locationReady, radius }
+    {
+      enabled: locationReady,
+      radius,
+      ...(topic === 'food'
+        ? {
+            openNow: foodFilters.openNow,
+            categories: foodFilters.categories.length > 0 ? foodFilters.categories : undefined,
+            sortBy: foodFilters.sortBy,
+          }
+        : {
+            genreIds: mediaFilters.genreIds.length > 0 ? mediaFilters.genreIds : undefined,
+            sortTmdb: mediaFilters.sortTmdb,
+          }),
+    }
   );
 
   const handleSwipeRight = useCallback(
@@ -126,7 +152,9 @@ export default function SwipeScreen() {
           <Text style={styles.backButton}>←</Text>
         </Pressable>
         <Text style={styles.header}>{topicDisplayNames[topic as Topic] ?? 'Swipe'}</Text>
-        <View style={{ width: 32 }} />
+        <Pressable onPress={() => setOptionsVisible(true)} hitSlop={12}>
+          <Text style={styles.optionsButton}>Options</Text>
+        </Pressable>
       </View>
       {topic === 'food' && (
         <>
@@ -154,6 +182,15 @@ export default function SwipeScreen() {
           topic={topic}
         />
       )}
+      <SearchOptions
+        topic={topic}
+        visible={optionsVisible}
+        onClose={() => setOptionsVisible(false)}
+        foodFilters={foodFilters}
+        mediaFilters={mediaFilters}
+        onApplyFood={setFoodFilters}
+        onApplyMedia={setMediaFilters}
+      />
       <View style={styles.hints}>
         <Text style={typography.caption}>← Nope</Text>
         <Text style={typography.caption}>Yes! →</Text>
@@ -188,6 +225,11 @@ const styles = StyleSheet.create({
     ...typography.subtitle,
     color: colors.primary,
     fontSize: 24,
+  },
+  optionsButton: {
+    ...typography.caption,
+    color: colors.primary,
+    fontWeight: '600',
   },
   hints: {
     flexDirection: 'row',

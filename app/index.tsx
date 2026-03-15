@@ -84,7 +84,7 @@ export default function HomeScreen() {
   }
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={[styles.container, isGroupMode && styles.containerGroupMode]}>
       <View style={styles.sparkleContainer}>
         <SparkleButton onPress={() => setSupportVisible(true)} />
       </View>
@@ -92,36 +92,36 @@ export default function HomeScreen() {
 
       <View style={styles.header}>
         <Logo />
-        <Text style={styles.tagline}>
+        <Text style={[styles.tagline, isGroupMode && styles.taglineGroup]}>
           {isGroupMode ? 'Group Mode — pick a topic' : 'What do you feel like?'}
         </Text>
       </View>
 
-      {/* Back button when in group mode or group sub-phase */}
-      {isGroupMode && (
-        <TouchableOpacity style={styles.backRow} onPress={resetToSolo}>
-          <Text style={styles.backText}>← Solo Mode</Text>
+      {/* Back button only visible in group enter-name sub-phase */}
+      {isGroupMode && groupPhase === 'enter-name' && (
+        <TouchableOpacity style={styles.backRow} onPress={() => setGroupPhase('pick')}>
+          <Text style={styles.backText}>← Back to topics</Text>
         </TouchableOpacity>
       )}
 
-      <View style={[styles.buttons, isGroupMode && styles.buttonsGroupMode]}>
+      <View style={styles.buttons}>
         {/* Show topic buttons in both modes — but enter-name/creating replaces them in group */}
         {(mode === 'solo' || (isGroupMode && groupPhase === 'pick')) && (
           <>
             <TopicButton
-              label={isGroupMode ? `Group: ${topicDisplayNames.food}` : topicDisplayNames.food}
+              label={topicDisplayNames.food}
               color={topicColors.food}
               icon="ForkKnife"
               onPress={() => handleTopicPress('food')}
             />
             <TopicButton
-              label={isGroupMode ? `Group: ${topicDisplayNames.movie}` : topicDisplayNames.movie}
+              label={topicDisplayNames.movie}
               color={topicColors.movie}
               icon="FilmSlate"
               onPress={() => handleTopicPress('movie')}
             />
             <TopicButton
-              label={isGroupMode ? `Group: ${topicDisplayNames.show}` : topicDisplayNames.show}
+              label={topicDisplayNames.show}
               color={topicColors.show}
               icon="Television"
               onPress={() => handleTopicPress('show')}
@@ -157,15 +157,23 @@ export default function HomeScreen() {
           </View>
         )}
 
-        {/* Solo mode: show group/join buttons below topics */}
-        {mode === 'solo' && (
+        {/* Mode buttons below topics */}
+        {(mode === 'solo' || (isGroupMode && groupPhase === 'pick')) && (
           <View style={styles.modeButtons}>
-            <TouchableOpacity style={styles.groupButton} onPress={() => setMode('group')}>
-              <Text style={styles.groupButtonText}>Group Mode</Text>
-            </TouchableOpacity>
-            <TouchableOpacity style={styles.joinButton} onPress={() => router.push('/join')}>
-              <Text style={styles.joinButtonText}>Join Session</Text>
-            </TouchableOpacity>
+            {mode === 'solo' ? (
+              <>
+                <TouchableOpacity style={styles.groupButton} onPress={() => setMode('group')}>
+                  <Text style={styles.groupButtonText}>Group Mode</Text>
+                </TouchableOpacity>
+                <TouchableOpacity style={styles.joinButton} onPress={() => router.push('/join')}>
+                  <Text style={styles.joinButtonText}>Join Session</Text>
+                </TouchableOpacity>
+              </>
+            ) : (
+              <TouchableOpacity style={styles.goBackButton} onPress={resetToSolo}>
+                <Text style={styles.goBackButtonText}>Go Back</Text>
+              </TouchableOpacity>
+            )}
           </View>
         )}
       </View>
@@ -178,6 +186,9 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: colors.background,
     paddingHorizontal: spacing.xl,
+  },
+  containerGroupMode: {
+    backgroundColor: colors.tertiary,
   },
   sparkleContainer: {
     position: 'absolute',
@@ -195,25 +206,22 @@ const styles = StyleSheet.create({
     marginTop: spacing.sm,
     color: colors.textSecondary,
   },
+  taglineGroup: {
+    color: '#FFFFFF',
+  },
   backRow: {
     paddingVertical: spacing.sm,
     alignSelf: 'flex-start',
   },
   backText: {
     ...typography.body,
-    color: colors.tertiary,
+    color: '#FFFFFF',
     fontWeight: '600',
   },
   buttons: {
     flex: 2,
     justifyContent: 'center',
     alignItems: 'center',
-  },
-  buttonsGroupMode: {
-    backgroundColor: `${colors.tertiary}10`,
-    borderRadius: 20,
-    padding: spacing.md,
-    marginBottom: spacing.md,
   },
   modeButtons: {
     marginTop: spacing.xl,
@@ -248,6 +256,19 @@ const styles = StyleSheet.create({
     ...typography.body,
     color: colors.tertiary,
     fontWeight: '600',
+  },
+  goBackButton: {
+    backgroundColor: colors.surface,
+    paddingVertical: spacing.md,
+    paddingHorizontal: spacing.xl,
+    borderRadius: 16,
+    width: '100%',
+    alignItems: 'center',
+  },
+  goBackButtonText: {
+    ...typography.body,
+    color: colors.tertiary,
+    fontWeight: '700',
   },
   groupForm: {
     width: '100%',

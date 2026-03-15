@@ -31,14 +31,28 @@ function mapYelpBusiness(biz: YelpBusiness): CardItem {
 async function fetchFromYelp(
   latitude: number,
   longitude: number,
-  radiusMeters: number
+  radiusMeters: number,
+  options?: { openNow?: boolean; categories?: string[]; sortBy?: string }
 ): Promise<CardItem[] | null> {
   const apiKey = process.env.EXPO_PUBLIC_YELP_API_KEY;
   // Yelp caps radius at 40000 meters
   const clampedRadius = Math.min(radiusMeters, 40000);
+  const cats = options?.categories?.length ? options.categories.join(',') : 'restaurants';
+  const sortBy = options?.sortBy ?? 'best_match';
+  const params = new URLSearchParams({
+    latitude: String(latitude),
+    longitude: String(longitude),
+    radius: String(clampedRadius),
+    categories: cats,
+    limit: '20',
+    sort_by: sortBy,
+  });
+  if (options?.openNow) {
+    params.set('open_now', 'true');
+  }
   try {
     const response = await fetch(
-      `https://api.yelp.com/v3/businesses/search?latitude=${latitude}&longitude=${longitude}&radius=${clampedRadius}&categories=restaurants&limit=20&sort_by=best_match`,
+      `https://api.yelp.com/v3/businesses/search?${params}`,
       {
         headers: {
           Authorization: `Bearer ${apiKey}`,
@@ -119,7 +133,11 @@ export const restaurantProvider: CardProvider = {
     const radiusMiles = radius ?? 5;
     const radiusMeters = Math.round(radiusMiles * MILES_TO_METERS);
 
-    const yelpResult = await fetchFromYelp(latitude, longitude, radiusMeters);
+    const yelpResult = await fetchFromYelp(latitude, longitude, radiusMeters, {
+      openNow: options.openNow,
+      categories: options.categories,
+      sortBy: options.sortBy,
+    });
     if (yelpResult !== null) return yelpResult;
 
     const googleResult = await fetchFromGoogle(latitude, longitude, radiusMeters);

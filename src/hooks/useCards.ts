@@ -19,12 +19,24 @@ interface UseCardsResult {
 export function useCards(
   topic: Topic,
   location?: { latitude: number; longitude: number },
-  options?: { enabled?: boolean; radius?: number }
+  options?: {
+    enabled?: boolean;
+    radius?: number;
+    openNow?: boolean;
+    categories?: string[];
+    sortBy?: 'best_match' | 'distance' | 'rating';
+    genreIds?: number[];
+    sortTmdb?: 'popularity' | 'rating';
+  }
 ): UseCardsResult {
   const enabled = options?.enabled ?? true;
   const [cards, setCards] = useState<CardItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  // Serialize filter arrays for dependency comparison
+  const categoriesKey = options?.categories?.join(',') ?? '';
+  const genreIdsKey = options?.genreIds?.join(',') ?? '';
 
   useEffect(() => {
     if (!enabled) return;
@@ -41,12 +53,17 @@ export function useCards(
           latitude: location?.latitude,
           longitude: location?.longitude,
           radius: options?.radius,
+          openNow: options?.openNow,
+          categories: options?.categories,
+          sortBy: options?.sortBy,
+          genreIds: options?.genreIds,
+          sortTmdb: options?.sortTmdb,
         };
         const result = await provider.fetchCards(fetchOptions);
 
         if (!cancelled) {
           if (result.length === 0) {
-            setError('No results found. Please try again later.');
+            setError('No results found. Try adjusting your filters.');
           } else {
             setCards(result);
           }
@@ -62,7 +79,7 @@ export function useCards(
 
     load();
     return () => { cancelled = true; };
-  }, [topic, location?.latitude, location?.longitude, enabled, options?.radius]);
+  }, [topic, location?.latitude, location?.longitude, enabled, options?.radius, options?.openNow, categoriesKey, options?.sortBy, genreIdsKey, options?.sortTmdb]);
 
   return { cards, loading, error };
 }

@@ -33,16 +33,28 @@ export const showProvider: CardProvider = {
   async fetchCards(options: FetchOptions): Promise<CardItem[]> {
     const apiKey = process.env.EXPO_PUBLIC_TMDB_API_KEY;
     const page = options.page ?? 1;
+    const hasGenres = options.genreIds && options.genreIds.length > 0;
+    const useDiscover = hasGenres || options.sortTmdb === 'rating';
 
     try {
-      const response = await fetch(
-        `${TMDB_BASE}/trending/tv/week?page=${page}`,
-        {
-          headers: {
-            Authorization: `Bearer ${apiKey}`,
-          },
+      let url: string;
+      if (useDiscover) {
+        const params = new URLSearchParams({
+          page: String(page),
+          sort_by: options.sortTmdb === 'rating' ? 'vote_average.desc' : 'popularity.desc',
+          'vote_count.gte': '50',
+        });
+        if (hasGenres) {
+          params.set('with_genres', options.genreIds!.join(','));
         }
-      );
+        url = `${TMDB_BASE}/discover/tv?${params}`;
+      } else {
+        url = `${TMDB_BASE}/trending/tv/week?page=${page}`;
+      }
+
+      const response = await fetch(url, {
+        headers: { Authorization: `Bearer ${apiKey}` },
+      });
 
       if (!response.ok) return [];
 
