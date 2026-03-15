@@ -16,7 +16,7 @@ describe('SupportPanel', () => {
     );
     expect(getByText(/books/i)).toBeTruthy();
     expect(getByText(/podcast/i)).toBeTruthy();
-    expect(getByText(/coffee/i)).toBeTruthy();
+    expect(getByText(/Buy me a coffee/i)).toBeTruthy();
     expect(getByText(/rate/i)).toBeTruthy();
   });
 
@@ -25,7 +25,7 @@ describe('SupportPanel', () => {
     const { getByText } = render(
       <SupportPanel visible={true} onClose={onClose} />
     );
-    fireEvent.press(getByText('✕'));
+    fireEvent.press(getByText('Roll up the scroll'));
     expect(onClose).toHaveBeenCalledTimes(1);
   });
 
