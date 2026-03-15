@@ -1,4 +1,4 @@
-import React, { useRef } from 'react';
+import React from 'react';
 import {
   View,
   Text,
@@ -9,8 +9,14 @@ import {
   ScrollView,
   Linking,
   Dimensions,
-  PanResponder,
 } from 'react-native';
+import { Gesture, GestureDetector } from 'react-native-gesture-handler';
+import Animated, {
+  useSharedValue,
+  useAnimatedStyle,
+  withTiming,
+  runOnJS,
+} from 'react-native-reanimated';
 import { colors, spacing, typography } from '../theme';
 import { CardItem, Topic } from '../providers/types';
 import { StarRating } from './StarRating';
@@ -21,6 +27,9 @@ interface CardDetailProps {
   onClose: () => void;
   topic: Topic;
 }
+
+const { height: SCREEN_HEIGHT } = Dimensions.get('window');
+const DISMISS_THRESHOLD = SCREEN_HEIGHT * 0.15; // 15% of screen = dismiss
 
 function getActionButtons(card: CardItem, topic: Topic): { label: string; url: string }[] {
   const buttons: { label: string; url: string }[] = [];
@@ -68,14 +77,39 @@ function getActionButtons(card: CardItem, topic: Topic): { label: string; url: s
 }
 
 export function CardDetail({ card, visible, onClose, topic }: CardDetailProps) {
-  const panResponder = useRef(
-    PanResponder.create({
-      onMoveShouldSetPanResponder: (_, g) => g.dy > 5 && Math.abs(g.dy) > Math.abs(g.dx),
-      onPanResponderRelease: (_, g) => {
-        if (g.dy > 30) onClose();
-      },
+  const translateY = useSharedValue(0);
+
+  const dismiss = () => onClose();
+
+  const panGesture = Gesture.Pan()
+    .onUpdate((e) => {
+      // Only allow dragging downward
+      if (e.translationY > 0) {
+        translateY.value = e.translationY;
+      }
     })
-  ).current;
+    .onEnd((e) => {
+      if (e.translationY > DISMISS_THRESHOLD || e.velocityY > 500) {
+        // Dismiss: slide off screen
+        translateY.value = withTiming(SCREEN_HEIGHT, { duration: 200 }, () => {
+          runOnJS(dismiss)();
+        });
+      } else {
+        // Snap back
+        translateY.value = withTiming(0, { duration: 150 });
+      }
+    });
+
+  const animatedStyle = useAnimatedStyle(() => ({
+    transform: [{ translateY: translateY.value }],
+  }));
+
+  // Reset position when modal opens
+  React.useEffect(() => {
+    if (visible) {
+      translateY.value = 0;
+    }
+  }, [visible, translateY]);
 
   if (!visible) return null;
 
@@ -84,64 +118,69 @@ export function CardDetail({ card, visible, onClose, topic }: CardDetailProps) {
 
   return (
     <Modal visible={visible} transparent animationType="slide">
-      <View style={styles.backdrop} {...panResponder.panHandlers}>
-        <View style={styles.container}>
-          <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scroll}>
-            {card.imageUrl && (
-              <Image source={{ uri: card.imageUrl }} style={styles.image} />
-            )}
+      <View style={styles.backdrop}>
+        <GestureDetector gesture={panGesture}>
+          <Animated.View style={[styles.container, animatedStyle]}>
+            {/* Drag handle */}
+            <View style={styles.handleBar}>
+              <View style={styles.handle} />
+            </View>
 
-            <View style={styles.content}>
-              <Text style={styles.title}>{card.title}</Text>
-              <Text style={styles.subtitle}>{card.subtitle}</Text>
-
-              {card.rating != null && (
-                <View style={styles.ratingRow}>
-                  <StarRating rating={card.rating} size={22} />
-                  <Text style={styles.ratingNumber}>{card.rating.toFixed(1)}</Text>
-                </View>
+            <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scroll}>
+              {card.imageUrl && (
+                <Image source={{ uri: card.imageUrl }} style={styles.image} />
               )}
 
-              {card.details.length > 0 && (
-                <View style={styles.detailsSection}>
-                  {card.details.map((d, i) => (
-                    <Text key={i} style={styles.detail}>{d}</Text>
+              <View style={styles.content}>
+                <Text style={styles.title}>{card.title}</Text>
+                <Text style={styles.subtitle}>{card.subtitle}</Text>
+
+                {card.rating != null && (
+                  <View style={styles.ratingRow}>
+                    <StarRating rating={card.rating} size={22} />
+                    <Text style={styles.ratingNumber}>{card.rating.toFixed(1)}</Text>
+                  </View>
+                )}
+
+                {card.details.length > 0 && (
+                  <View style={styles.detailsSection}>
+                    {card.details.map((d, i) => (
+                      <Text key={i} style={styles.detail}>{d}</Text>
+                    ))}
+                  </View>
+                )}
+
+                {overview && (
+                  <View style={styles.overviewSection}>
+                    <Text style={styles.sectionTitle}>Overview</Text>
+                    <Text style={styles.overviewText}>{overview}</Text>
+                  </View>
+                )}
+
+                <View style={styles.actionsSection}>
+                  {actions.map((action) => (
+                    <TouchableOpacity
+                      key={action.label}
+                      style={styles.actionButton}
+                      onPress={() => Linking.openURL(action.url)}
+                      activeOpacity={0.7}
+                    >
+                      <Text style={styles.actionText}>{action.label}</Text>
+                    </TouchableOpacity>
                   ))}
                 </View>
-              )}
-
-              {overview && (
-                <View style={styles.overviewSection}>
-                  <Text style={styles.sectionTitle}>Overview</Text>
-                  <Text style={styles.overviewText}>{overview}</Text>
-                </View>
-              )}
-
-              <View style={styles.actionsSection}>
-                {actions.map((action) => (
-                  <TouchableOpacity
-                    key={action.label}
-                    style={styles.actionButton}
-                    onPress={() => Linking.openURL(action.url)}
-                    activeOpacity={0.7}
-                  >
-                    <Text style={styles.actionText}>{action.label}</Text>
-                  </TouchableOpacity>
-                ))}
               </View>
-            </View>
-          </ScrollView>
+            </ScrollView>
 
-          <TouchableOpacity style={styles.closeButton} onPress={onClose}>
-            <Text style={styles.closeText}>← Back to swiping</Text>
-          </TouchableOpacity>
-        </View>
+            <TouchableOpacity style={styles.closeButton} onPress={onClose}>
+              <Text style={styles.closeText}>← Back to swiping</Text>
+            </TouchableOpacity>
+          </Animated.View>
+        </GestureDetector>
       </View>
     </Modal>
   );
 }
-
-const { height: SCREEN_HEIGHT } = Dimensions.get('window');
 
 const styles = StyleSheet.create({
   backdrop: {
@@ -155,6 +194,16 @@ const styles = StyleSheet.create({
     borderTopLeftRadius: 24,
     borderTopRightRadius: 24,
     overflow: 'hidden',
+  },
+  handleBar: {
+    alignItems: 'center',
+    paddingVertical: spacing.sm,
+  },
+  handle: {
+    width: 40,
+    height: 5,
+    borderRadius: 3,
+    backgroundColor: '#D0D0D0',
   },
   scroll: {
     paddingBottom: spacing.md,
