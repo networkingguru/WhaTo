@@ -7,11 +7,11 @@ interface SupportPanelProps {
   onClose: () => void;
 }
 
-// IMPORTANT: Replace these placeholder URLs with the creator's actual links before shipping
 const LINKS = [
-  { label: 'Check out my books', url: 'https://amazon.com/author/REPLACE_ME' },
-  { label: 'Listen to the podcast', url: 'https://podcast.example.com/REPLACE_ME' },
-  { label: 'Buy me a coffee', url: 'https://patreon.com/REPLACE_ME' },
+  { label: 'Check out my books', url: 'https://www.amazon.com/stores/Brian-Hill/author/B001IXMPBK' },
+  { label: 'Listen to the podcast', url: 'https://finguptheineffable.podbean.com' },
+  { label: 'Buy me a coffee', url: 'https://patreon.com/NetworkingGuru?utm_medium=unknown&utm_source=join_link&utm_campaign=creatorshare_creator&utm_content=copyLink' },
+  { label: 'Watch me on YouTube', url: 'https://youtube.com/@brianondrumsyt?si=feBQ_mEwWGHRdNli' },
   { label: 'Rate & share the app', url: 'store-review' },
 ];
 
