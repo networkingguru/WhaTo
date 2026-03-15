@@ -1,5 +1,5 @@
 import React from 'react';
-import { render, fireEvent } from '@testing-library/react-native';
+import { render, fireEvent, waitFor } from '@testing-library/react-native';
 import { SupportPanel } from '../../src/components/SupportPanel';
 
 describe('SupportPanel', () => {
@@ -20,13 +20,16 @@ describe('SupportPanel', () => {
     expect(getByText(/rate/i)).toBeTruthy();
   });
 
-  it('calls onClose when dismiss is pressed', () => {
+  it('calls onClose when dismiss is pressed', async () => {
     const onClose = jest.fn();
     const { getByText } = render(
       <SupportPanel visible={true} onClose={onClose} />
     );
     fireEvent.press(getByText('Roll up the scroll'));
-    expect(onClose).toHaveBeenCalledTimes(1);
+    // onClose is called after roll-up animation completes via runOnJS
+    await waitFor(() => {
+      expect(onClose).toHaveBeenCalledTimes(1);
+    }, { timeout: 2000 });
   });
 
   it('does not render when not visible', () => {

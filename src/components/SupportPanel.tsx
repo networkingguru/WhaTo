@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useCallback } from 'react';
 import {
   View,
   Text,
@@ -9,6 +9,13 @@ import {
   ScrollView,
   Dimensions,
 } from 'react-native';
+import Animated, {
+  useSharedValue,
+  useAnimatedStyle,
+  withTiming,
+  runOnJS,
+  Easing,
+} from 'react-native-reanimated';
 import { LinearGradient } from 'expo-linear-gradient';
 import { colors, spacing, typography } from '../theme';
 
@@ -25,7 +32,40 @@ const LINKS = [
   { label: 'Rate & share the app', url: 'store-review', icon: '⭐' },
 ];
 
+const ROLL_DURATION = 500;
+
 export function SupportPanel({ visible, onClose }: SupportPanelProps) {
+  const scaleY = useSharedValue(0);
+  const opacity = useSharedValue(0);
+  const backdropOpacity = useSharedValue(0);
+
+  useEffect(() => {
+    if (visible) {
+      backdropOpacity.value = withTiming(1, { duration: 200 });
+      scaleY.value = withTiming(1, { duration: 400, easing: Easing.out(Easing.back(1.05)) });
+      opacity.value = withTiming(1, { duration: 300 });
+    }
+  }, [visible, scaleY, opacity, backdropOpacity]);
+
+  const handleRollUp = useCallback(() => {
+    opacity.value = withTiming(0.3, { duration: ROLL_DURATION });
+    backdropOpacity.value = withTiming(0, { duration: ROLL_DURATION });
+    scaleY.value = withTiming(
+      0,
+      { duration: ROLL_DURATION, easing: Easing.in(Easing.back(1.1)) },
+      () => runOnJS(onClose)()
+    );
+  }, [scaleY, opacity, backdropOpacity, onClose]);
+
+  const scrollAnimatedStyle = useAnimatedStyle(() => ({
+    transform: [{ scaleY: scaleY.value }],
+    opacity: opacity.value,
+  }));
+
+  const backdropAnimatedStyle = useAnimatedStyle(() => ({
+    backgroundColor: `rgba(0,0,0,${0.7 * backdropOpacity.value})`,
+  }));
+
   if (!visible) return null;
 
   async function handleLink(url: string) {
@@ -44,9 +84,9 @@ export function SupportPanel({ visible, onClose }: SupportPanelProps) {
   }
 
   return (
-    <Modal visible={visible} transparent animationType="fade">
-      <View style={styles.backdrop}>
-        <View style={styles.scrollOuter}>
+    <Modal visible={visible} transparent animationType="none">
+      <Animated.View style={[styles.backdrop, backdropAnimatedStyle]}>
+        <Animated.View style={[styles.scrollOuter, scrollAnimatedStyle]}>
           <View style={styles.scrollInner}>
             <LinearGradient
               colors={['#F5A623', '#FF6B4A', '#F5A623']}
@@ -96,12 +136,12 @@ export function SupportPanel({ visible, onClose }: SupportPanelProps) {
               </Text>
             </ScrollView>
 
-            <TouchableOpacity style={styles.closeButton} onPress={onClose}>
+            <TouchableOpacity style={styles.closeButton} onPress={handleRollUp}>
               <Text style={styles.closeText}>Roll up the scroll</Text>
             </TouchableOpacity>
           </View>
-        </View>
-      </View>
+        </Animated.View>
+      </Animated.View>
     </Modal>
   );
 }
