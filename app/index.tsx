@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, TextInput, Alert, ActivityIndicator } from 'react-native';
-import { TouchableOpacity } from 'react-native';
+import { View, Text, StyleSheet, TextInput, Alert, ActivityIndicator, TouchableOpacity, ScrollView } from 'react-native';
 import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { TopicButton } from '../src/components/TopicButton';
@@ -20,22 +19,37 @@ import * as Location from 'expo-location';
 export default function HomeScreen() {
   const router = useRouter();
   const [supportVisible, setSupportVisible] = useState(false);
-  const [groupStep, setGroupStep] = useState<'idle' | 'pick-topic' | 'enter-name' | 'creating'>('idle');
+  const [mode, setMode] = useState<'solo' | 'group'>('solo');
+  const [groupPhase, setGroupPhase] = useState<'pick' | 'enter-name' | 'creating'>('pick');
   const [groupTopic, setGroupTopic] = useState<Topic | null>(null);
   const [displayName, setDisplayName] = useState('');
 
-  function handleTopic(topic: Topic) {
-    router.push({ pathname: '/swipe', params: { topic } });
+  const isGroupMode = mode === 'group';
+
+  function handleTopicPress(topic: Topic) {
+    if (isGroupMode) {
+      setGroupTopic(topic);
+      setGroupPhase('enter-name');
+    } else {
+      router.push({ pathname: '/swipe', params: { topic } });
+    }
+  }
+
+  function resetToSolo() {
+    setMode('solo');
+    setGroupPhase('pick');
+    setGroupTopic(null);
+    setDisplayName('');
   }
 
   const providers = { movie: movieProvider, show: showProvider, food: restaurantProvider };
 
   async function handleCreateGroup() {
     if (!groupTopic || !displayName.trim()) {
-      Alert.alert('Missing info', 'Please select a topic and enter your name.');
+      Alert.alert('Missing info', 'Please enter your name.');
       return;
     }
-    setGroupStep('creating');
+    setGroupPhase('creating');
     try {
       const code = generateSessionCode();
       const deviceId = await getDeviceId();
@@ -52,7 +66,7 @@ export default function HomeScreen() {
       const cards = await providers[groupTopic].fetchCards(fetchOptions);
       if (cards.length === 0) {
         Alert.alert('No results', 'Could not find any options. Try again later.');
-        setGroupStep('enter-name');
+        setGroupPhase('enter-name');
         return;
       }
 
@@ -61,11 +75,11 @@ export default function HomeScreen() {
         : undefined;
 
       await createSession(code, groupTopic, deviceId, displayName.trim(), cards, location);
-      setGroupStep('idle');
+      resetToSolo();
       router.push({ pathname: '/lobby', params: { code, topic: groupTopic, isCreator: 'true' } });
     } catch {
       Alert.alert('Error', 'Could not create session. Please try again.');
-      setGroupStep('enter-name');
+      setGroupPhase('enter-name');
     }
   }
 
@@ -75,40 +89,48 @@ export default function HomeScreen() {
         <SparkleButton onPress={() => setSupportVisible(true)} />
       </View>
       <SupportPanel visible={supportVisible} onClose={() => setSupportVisible(false)} />
+
       <View style={styles.header}>
         <Logo />
-        <Text style={styles.tagline}>What do you feel like?</Text>
+        <Text style={styles.tagline}>
+          {isGroupMode ? 'Group Mode — pick a topic' : 'What do you feel like?'}
+        </Text>
       </View>
-      <View style={styles.buttons}>
-        <TopicButton label={topicDisplayNames.food} color={topicColors.food} icon="ForkKnife" onPress={() => handleTopic('food')} />
-        <TopicButton label={topicDisplayNames.movie} color={topicColors.movie} icon="FilmSlate" onPress={() => handleTopic('movie')} />
-        <TopicButton label={topicDisplayNames.show} color={topicColors.show} icon="Television" onPress={() => handleTopic('show')} />
 
-        {groupStep === 'idle' && (
-          <View style={styles.groupSection}>
-            <TouchableOpacity style={styles.groupButton} onPress={() => setGroupStep('pick-topic')}>
-              <Text style={styles.groupButtonText}>Group Mode</Text>
-            </TouchableOpacity>
-            <TouchableOpacity style={styles.joinButton} onPress={() => router.push('/join')}>
-              <Text style={styles.joinButtonText}>Join Session</Text>
-            </TouchableOpacity>
-          </View>
+      {/* Back button when in group mode or group sub-phase */}
+      {isGroupMode && (
+        <TouchableOpacity style={styles.backRow} onPress={resetToSolo}>
+          <Text style={styles.backText}>← Solo Mode</Text>
+        </TouchableOpacity>
+      )}
+
+      <View style={[styles.buttons, isGroupMode && styles.buttonsGroupMode]}>
+        {/* Show topic buttons in both modes — but enter-name/creating replaces them in group */}
+        {(mode === 'solo' || (isGroupMode && groupPhase === 'pick')) && (
+          <>
+            <TopicButton
+              label={isGroupMode ? `Group: ${topicDisplayNames.food}` : topicDisplayNames.food}
+              color={topicColors.food}
+              icon="ForkKnife"
+              onPress={() => handleTopicPress('food')}
+            />
+            <TopicButton
+              label={isGroupMode ? `Group: ${topicDisplayNames.movie}` : topicDisplayNames.movie}
+              color={topicColors.movie}
+              icon="FilmSlate"
+              onPress={() => handleTopicPress('movie')}
+            />
+            <TopicButton
+              label={isGroupMode ? `Group: ${topicDisplayNames.show}` : topicDisplayNames.show}
+              color={topicColors.show}
+              icon="Television"
+              onPress={() => handleTopicPress('show')}
+            />
+          </>
         )}
 
-        {groupStep === 'pick-topic' && (
-          <View style={styles.groupSection}>
-            <Text style={styles.groupTitle}>Pick a topic for the group</Text>
-            <TopicButton label={topicDisplayNames.food} color={topicColors.food} icon="ForkKnife"
-              onPress={() => { setGroupTopic('food'); setGroupStep('enter-name'); }} />
-            <TopicButton label={topicDisplayNames.movie} color={topicColors.movie} icon="FilmSlate"
-              onPress={() => { setGroupTopic('movie'); setGroupStep('enter-name'); }} />
-            <TopicButton label={topicDisplayNames.show} color={topicColors.show} icon="Television"
-              onPress={() => { setGroupTopic('show'); setGroupStep('enter-name'); }} />
-          </View>
-        )}
-
-        {groupStep === 'enter-name' && (
-          <View style={styles.groupSection}>
+        {isGroupMode && groupPhase === 'enter-name' && (
+          <View style={styles.groupForm}>
             <Text style={styles.groupTitle}>Your display name</Text>
             <TextInput
               style={styles.nameInput}
@@ -122,13 +144,28 @@ export default function HomeScreen() {
             <TouchableOpacity style={styles.createButton} onPress={handleCreateGroup}>
               <Text style={styles.createButtonText}>Create Session</Text>
             </TouchableOpacity>
+            <TouchableOpacity onPress={() => setGroupPhase('pick')} style={styles.backLink}>
+              <Text style={styles.backLinkText}>← Back to topics</Text>
+            </TouchableOpacity>
           </View>
         )}
 
-        {groupStep === 'creating' && (
-          <View style={styles.groupSection}>
+        {isGroupMode && groupPhase === 'creating' && (
+          <View style={styles.groupForm}>
             <ActivityIndicator size="large" color={colors.primary} />
             <Text style={[typography.body, { marginTop: spacing.md }]}>Creating session...</Text>
+          </View>
+        )}
+
+        {/* Solo mode: show group/join buttons below topics */}
+        {mode === 'solo' && (
+          <View style={styles.modeButtons}>
+            <TouchableOpacity style={styles.groupButton} onPress={() => setMode('group')}>
+              <Text style={styles.groupButtonText}>Group Mode</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.joinButton} onPress={() => router.push('/join')}>
+              <Text style={styles.joinButtonText}>Join Session</Text>
+            </TouchableOpacity>
           </View>
         )}
       </View>
@@ -158,20 +195,31 @@ const styles = StyleSheet.create({
     marginTop: spacing.sm,
     color: colors.textSecondary,
   },
+  backRow: {
+    paddingVertical: spacing.sm,
+    alignSelf: 'flex-start',
+  },
+  backText: {
+    ...typography.body,
+    color: colors.tertiary,
+    fontWeight: '600',
+  },
   buttons: {
     flex: 2,
     justifyContent: 'center',
     alignItems: 'center',
   },
-  groupSection: {
+  buttonsGroupMode: {
+    backgroundColor: `${colors.tertiary}10`,
+    borderRadius: 20,
+    padding: spacing.md,
+    marginBottom: spacing.md,
+  },
+  modeButtons: {
     marginTop: spacing.xl,
     gap: spacing.md,
+    width: '100%',
     alignItems: 'center',
-  },
-  groupTitle: {
-    ...typography.subtitle,
-    textAlign: 'center',
-    marginBottom: spacing.sm,
   },
   groupButton: {
     backgroundColor: colors.tertiary,
@@ -201,6 +249,15 @@ const styles = StyleSheet.create({
     color: colors.tertiary,
     fontWeight: '600',
   },
+  groupForm: {
+    width: '100%',
+    gap: spacing.md,
+    alignItems: 'center',
+  },
+  groupTitle: {
+    ...typography.subtitle,
+    textAlign: 'center',
+  },
   nameInput: {
     backgroundColor: colors.surface,
     borderRadius: 12,
@@ -223,5 +280,12 @@ const styles = StyleSheet.create({
     ...typography.body,
     color: '#FFFFFF',
     fontWeight: '700',
+  },
+  backLink: {
+    paddingVertical: spacing.sm,
+  },
+  backLinkText: {
+    ...typography.caption,
+    color: colors.tertiary,
   },
 });
