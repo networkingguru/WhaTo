@@ -39,6 +39,8 @@ Renamed to flow from the app name — "WhaTo... Eat?" / "WhaTo... Watch?" / "Wha
 - **Watch?** (amber `#F5A623`) — movies via TMDB
 - **Stream?** (purple `#7B68EE`) — TV shows via TMDB
 
+**Internal type values stay the same** (`'food' | 'movie' | 'show'` in `types.ts`). The display names ("Eat?", "Watch?", "Stream?") are UI-only labels. A display name mapping will be added (e.g., `{ food: 'Eat?', movie: 'Watch?', show: 'Stream?' }`) so the `Topic` type does not need to change and solo mode is unaffected.
+
 ### Iconography
 
 Replace emoji icons (🍕🎬📺) with a consistent icon library (Phosphor Icons — lightweight, React Native compatible). Topic buttons become pill-shaped with rounded corners, each in its own accent color.
@@ -111,7 +113,7 @@ The message says "I don't collect **your** data" — the app may use simple, ano
 ```
 sessions/
   WHATO-7K3M/
-    topic: "eat" | "watch" | "stream"
+    topic: "food" | "movie" | "show"    # matches internal Topic type
     status: "waiting" | "active" | "complete"
     createdBy: "device-id-abc"
     createdAt: <timestamp>
@@ -136,9 +138,21 @@ sessions/
 ```
 
 **Session Lifecycle:**
-- Sessions auto-expire after 24 hours
+- Sessions auto-expire after 24 hours. Expiry is enforced client-side: when any client reads a session, it checks `createdAt` and ignores/deletes sessions older than 24 hours. Firebase security rules also deny reads/writes on sessions where `createdAt` is older than 24 hours, so stale data can't be accessed even if no client cleans it up.
 - No user accounts — participants identified by anonymous device ID + display name entered when joining
-- Creator can end the session early
+- Creator can end the session early (sets `status: "complete"`)
+- **Participant cap:** Maximum 8 participants per session. Firebase free tier allows 100 concurrent connections total; capping per-session keeps headroom for multiple concurrent sessions.
+
+**Completion Detection:**
+- Each participant's client writes `completed: true` to their participant record after their last swipe (when swipe count equals `cards` array length)
+- All clients listen on the session's `participants/` node. When every participant has `completed: true`, the results screen triggers automatically
+- The session creator can also force-end the session at any time (sets `status: "complete"`), which triggers results with whatever swipes exist
+
+**Error Handling:**
+- **Participant disconnects mid-swipe:** Their partial swipes are already in Firebase. If they reconnect, they resume from where they left off (check swipe count vs cards). If they never return, the creator can force-end the session.
+- **Creator disconnects:** The session persists in Firebase. Any participant can still swipe. The session auto-expires after 24 hours if the creator never returns.
+- **Late join attempt:** If a user tries to join a session with status `"active"` or `"complete"`, they see a "Session already started" or "Session ended" message.
+- **Firebase connection limit:** If the connection fails, show a "Couldn't connect — try again in a moment" error. The 8-participant cap and 24-hour expiry keep connection usage manageable.
 
 ### Match Computation
 
@@ -171,7 +185,9 @@ The session creator sets location + radius when creating an Eat? session. All pa
 ### Implementation
 
 - `react-native-maps` for the MapView picker
-- Radius parameter passed to existing Yelp/Google Places API calls in `restaurantProvider.ts`
+- Add `radius` (in miles) to the `FetchOptions` interface in `types.ts`
+- Update `restaurantProvider.ts`: pass radius to Yelp API (convert miles → meters for the `radius` param) and to Google Places API (replace the hardcoded `radius=5000`)
+- Default radius of 5 miles (~8047 meters) when not specified, preserving current behavior
 
 ## New Dependencies
 
@@ -181,7 +197,7 @@ The session creator sets location + radius when creating an Eat? session. All pa
 | `@react-native-firebase/database` | Realtime Database for session sync |
 | `react-native-maps` | Map location picker for Eat? |
 | `phosphor-react-native` | Icon library replacing emojis |
-| `expo-sharing` | Native SMS share sheet |
+| `expo-sms` | Compose SMS with pre-filled message for session invites |
 
 ## Architecture Notes
 
