@@ -91,6 +91,39 @@ describe('restaurantProvider', () => {
     });
   });
 
+  it('passes radius to Yelp API in meters', async () => {
+    mockFetch.mockResolvedValueOnce({
+      ok: true,
+      json: async () => yelpResponse,
+    });
+
+    await restaurantProvider.fetchCards({
+      latitude: 40.7128,
+      longitude: -74.006,
+      radius: 10, // 10 miles
+    });
+
+    const url = mockFetch.mock.calls[0][0] as string;
+    // 10 miles = 16093 meters
+    expect(url).toContain('radius=16093');
+  });
+
+  it('defaults to 5 mile radius when not specified', async () => {
+    mockFetch.mockResolvedValueOnce({
+      ok: true,
+      json: async () => yelpResponse,
+    });
+
+    await restaurantProvider.fetchCards({
+      latitude: 40.7128,
+      longitude: -74.006,
+    });
+
+    const url = mockFetch.mock.calls[0][0] as string;
+    // 5 miles = 8047 meters
+    expect(url).toContain('radius=8047');
+  });
+
   it('returns empty array when both APIs fail', async () => {
     mockFetch.mockResolvedValueOnce({ ok: false, status: 500 });
     mockFetch.mockResolvedValueOnce({ ok: false, status: 500 });

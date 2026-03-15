@@ -19,4 +19,5 @@ export interface FetchOptions {
   latitude?: number;
   longitude?: number;
   page?: number;
+  radius?: number; // in miles
 }

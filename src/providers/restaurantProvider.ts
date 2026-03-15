@@ -30,12 +30,15 @@ function mapYelpBusiness(biz: YelpBusiness): CardItem {
 
 async function fetchFromYelp(
   latitude: number,
-  longitude: number
+  longitude: number,
+  radiusMeters: number
 ): Promise<CardItem[] | null> {
   const apiKey = process.env.EXPO_PUBLIC_YELP_API_KEY;
+  // Yelp caps radius at 40000 meters
+  const clampedRadius = Math.min(radiusMeters, 40000);
   try {
     const response = await fetch(
-      `https://api.yelp.com/v3/businesses/search?latitude=${latitude}&longitude=${longitude}&categories=restaurants&limit=20&sort_by=best_match`,
+      `https://api.yelp.com/v3/businesses/search?latitude=${latitude}&longitude=${longitude}&radius=${clampedRadius}&categories=restaurants&limit=20&sort_by=best_match`,
       {
         headers: {
           Authorization: `Bearer ${apiKey}`,
@@ -89,12 +92,13 @@ function mapGooglePlace(place: GooglePlace): CardItem {
 
 async function fetchFromGoogle(
   latitude: number,
-  longitude: number
+  longitude: number,
+  radiusMeters: number
 ): Promise<CardItem[] | null> {
   const apiKey = process.env.EXPO_PUBLIC_GOOGLE_PLACES_API_KEY;
   try {
     const response = await fetch(
-      `https://maps.googleapis.com/maps/api/place/nearbysearch/json?location=${latitude},${longitude}&radius=5000&type=restaurant&key=${apiKey}`
+      `https://maps.googleapis.com/maps/api/place/nearbysearch/json?location=${latitude},${longitude}&radius=${radiusMeters}&type=restaurant&key=${apiKey}`
     );
     if (!response.ok) return null;
     const data = await response.json();
@@ -108,13 +112,17 @@ async function fetchFromGoogle(
 
 export const restaurantProvider: CardProvider = {
   async fetchCards(options: FetchOptions): Promise<CardItem[]> {
-    const { latitude, longitude } = options;
+    const { latitude, longitude, radius } = options;
     if (latitude == null || longitude == null) return [];
 
-    const yelpResult = await fetchFromYelp(latitude, longitude);
+    const MILES_TO_METERS = 1609.34;
+    const radiusMiles = radius ?? 5;
+    const radiusMeters = Math.round(radiusMiles * MILES_TO_METERS);
+
+    const yelpResult = await fetchFromYelp(latitude, longitude, radiusMeters);
     if (yelpResult !== null) return yelpResult;
 
-    const googleResult = await fetchFromGoogle(latitude, longitude);
+    const googleResult = await fetchFromGoogle(latitude, longitude, radiusMeters);
     if (googleResult !== null) return googleResult;
 
     return [];
