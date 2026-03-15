@@ -33,16 +33,13 @@ export function SwipeDeck({ cards, onSwipeRight, onSwipeLeft, onEmpty }: SwipeDe
   const nextCard = cards[currentIndex + 1];
 
   useEffect(() => {
-    if (currentIndex >= cards.length && cards.length > 0) {
+    if (currentIndex >= cards.length) {
       onEmpty();
     }
   }, [currentIndex, cards.length, onEmpty]);
 
-  useEffect(() => {
-    if (cards.length === 0) {
-      onEmpty();
-    }
-  }, [cards.length, onEmpty]);
+  // Note: empty cards from API errors are handled by useCards setting an error state.
+  // This component only handles the case where the user swiped through all cards.
 
   const advanceCard = useCallback(
     (direction: 'left' | 'right') => {
@@ -106,6 +103,12 @@ export function SwipeDeck({ cards, onSwipeRight, onSwipeLeft, onEmpty }: SwipeDe
     return (
       <View style={styles.empty}>
         <Text style={typography.body}>No more cards!</Text>
+        <Text
+          style={[typography.caption, styles.backLink]}
+          onPress={onEmpty}
+        >
+          ← Back to home
+        </Text>
       </View>
     );
   }
@@ -146,6 +149,10 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
+  },
+  backLink: {
+    marginTop: spacing.lg,
+    color: colors.primary,
   },
   overlay: {
     position: 'absolute',

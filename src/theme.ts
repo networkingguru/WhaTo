@@ -1,12 +1,15 @@
 export const colors = {
-  background: '#1A1A2E',
-  surface: '#16213E',
-  primary: '#E94560',
-  primaryLight: '#FF6B81',
-  text: '#EAEAEA',
-  textSecondary: '#A0A0B0',
-  accent: '#0F3460',
+  background: '#FFF8F0',
+  surface: '#FFFFFF',
+  primary: '#FF6B4A',
+  primaryLight: '#FF8A6A',
+  secondary: '#F5A623',
+  tertiary: '#7B68EE',
+  text: '#2D2D2D',
+  textSecondary: '#8B7355',
+  accent: '#7B68EE',
   success: '#4CAF50',
+  danger: '#FF4444',
   shadow: '#000000',
 } as const;
 
@@ -46,7 +49,7 @@ export const cardStyle = {
   borderRadius: 16,
   shadowColor: colors.shadow,
   shadowOffset: { width: 0, height: 4 },
-  shadowOpacity: 0.3,
+  shadowOpacity: 0.1,
   shadowRadius: 8,
   elevation: 8,
 } as const;

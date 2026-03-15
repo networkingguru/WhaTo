@@ -40,7 +40,6 @@ export const movieProvider: CardProvider = {
         {
           headers: {
             Authorization: `Bearer ${apiKey}`,
-            'Content-Type': 'application/json',
           },
         }
       );
