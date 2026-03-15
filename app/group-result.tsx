@@ -25,7 +25,9 @@ function getTopVotedCards(session: SessionData): CardItem[] {
 }
 
 export default function GroupResultScreen() {
-  const { code } = useLocalSearchParams<{ code: string }>();
+  const params = useLocalSearchParams<{ code: string; failed?: string }>();
+  const { code } = params;
+  const isFailed = params.failed === 'true';
   const router = useRouter();
   const [session, setSession] = useState<SessionData | null>(null);
 
@@ -39,6 +41,26 @@ export default function GroupResultScreen() {
     return (
       <SafeAreaView style={styles.center}>
         <Text style={typography.body}>Loading results...</Text>
+      </SafeAreaView>
+    );
+  }
+
+  // Match Failed state
+  if (isFailed) {
+    return (
+      <SafeAreaView style={[styles.container, styles.failedContainer]}>
+        <ScrollView contentContainerStyle={styles.failedScroll}>
+          <Text style={styles.failedTitle}>Match Failed</Text>
+          <Text style={styles.failedSubtitle}>
+            Someone ran out of options without finding any common ground.
+          </Text>
+          <Text style={styles.failedHint}>
+            Tip: Try enabling more cuisine types or genres in Options before starting a group session. More options = better chances of matching!
+          </Text>
+          <TouchableOpacity style={styles.failedHomeButton} onPress={() => router.replace('/')}>
+            <Text style={styles.homeText}>Start Over</Text>
+          </TouchableOpacity>
+        </ScrollView>
       </SafeAreaView>
     );
   }
@@ -164,6 +186,43 @@ const styles = StyleSheet.create({
     ...typography.body,
     color: '#FFFFFF',
     fontWeight: '700',
+  },
+  failedContainer: {
+    backgroundColor: '#FFF0F0',
+  },
+  failedScroll: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: spacing.xl,
+  },
+  failedTitle: {
+    ...typography.title,
+    color: colors.danger,
+    textAlign: 'center',
+  },
+  failedSubtitle: {
+    ...typography.body,
+    color: colors.text,
+    textAlign: 'center',
+    marginTop: spacing.md,
+    lineHeight: 24,
+  },
+  failedHint: {
+    ...typography.body,
+    color: colors.textSecondary,
+    textAlign: 'center',
+    marginTop: spacing.xl,
+    lineHeight: 24,
+    paddingHorizontal: spacing.md,
+  },
+  failedHomeButton: {
+    backgroundColor: colors.danger,
+    paddingVertical: spacing.md,
+    paddingHorizontal: spacing.xxl,
+    borderRadius: 16,
+    alignItems: 'center',
+    marginTop: spacing.xl,
   },
 });
 

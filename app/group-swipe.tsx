@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState, useRef } from 'react';
 import { View, Text, StyleSheet, ActivityIndicator, TouchableOpacity, Alert } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -9,11 +9,15 @@ import { topicDisplayNames } from '../src/utils/topicLabels';
 import {
   listenToSession,
   recordSwipe,
-  markCompleted,
   endSession,
+  computeLiveMatches,
+  hasHopelessParticipant,
+  startNextRound,
   SessionData,
 } from '../src/services/sessionService';
 import { getDeviceId } from '../src/services/deviceId';
+
+const GRACE_PERIOD_MS = 30_000;
 
 export default function GroupSwipeScreen() {
   const { code } = useLocalSearchParams<{ code: string }>();
@@ -21,30 +25,100 @@ export default function GroupSwipeScreen() {
   const [session, setSession] = useState<SessionData | null>(null);
   const [deviceId, setDeviceId] = useState<string | null>(null);
   const [cards, setCards] = useState<CardItem[]>([]);
+  const [round, setRound] = useState(1);
+  const [matchBanner, setMatchBanner] = useState(false);
+  const graceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const matchHandledRef = useRef(false);
 
   useEffect(() => {
     getDeviceId().then(setDeviceId);
   }, []);
 
+  // Listen for session updates
   useEffect(() => {
     if (!code) return;
     const unsub = listenToSession(code, (data) => {
       setSession(data);
-      if (data?.cards && cards.length === 0) {
-        setCards(data.cards);
+
+      // Detect round change — reload cards
+      const dataRound = data?.round ?? 1;
+      if (data?.cards && dataRound !== round) {
+        setRound(dataRound);
+        setCards([...data.cards]);
+        setMatchBanner(false);
+        matchHandledRef.current = false;
+        if (graceTimerRef.current) {
+          clearTimeout(graceTimerRef.current);
+          graceTimerRef.current = null;
+        }
+      } else if (data?.cards && cards.length === 0) {
+        setCards([...data.cards]);
       }
+
+      // Session ended externally
       if (data?.status === 'complete') {
         router.replace({ pathname: '/group-result', params: { code } });
       }
-      if (data?.participants) {
-        const allDone = Object.values(data.participants).every((p) => p.completed);
-        if (allDone && Object.keys(data.participants).length > 0) {
-          router.replace({ pathname: '/group-result', params: { code } });
-        }
-      }
     });
     return unsub;
-  }, [code, router, cards.length]);
+  }, [code, router, round, cards.length]);
+
+  // Real-time match detection
+  useEffect(() => {
+    if (!session || !deviceId || matchHandledRef.current) return;
+
+    // Check for hopeless participant (exhausted cards, zero yes-swipes)
+    if (hasHopelessParticipant(session)) {
+      matchHandledRef.current = true;
+      if (graceTimerRef.current) clearTimeout(graceTimerRef.current);
+      router.replace({ pathname: '/group-result', params: { code, failed: 'true' } });
+      return;
+    }
+
+    // Check for live unanimous matches
+    const liveMatches = computeLiveMatches(session);
+    if (liveMatches.length > 0 && !matchBanner) {
+      setMatchBanner(true);
+
+      // Start grace timer — 30s for everyone to finish current card
+      graceTimerRef.current = setTimeout(() => {
+        handleMatchResolution(session, liveMatches);
+      }, GRACE_PERIOD_MS);
+    }
+  }, [session, deviceId, matchBanner]);
+
+  // Cleanup timer on unmount
+  useEffect(() => {
+    return () => {
+      if (graceTimerRef.current) clearTimeout(graceTimerRef.current);
+    };
+  }, []);
+
+  function handleMatchResolution(sess: SessionData, matchIds: string[]) {
+    if (matchHandledRef.current) return;
+    matchHandledRef.current = true;
+
+    // Re-check matches with latest session data
+    const finalMatches = computeLiveMatches(sess);
+    const ids = finalMatches.length > 0 ? finalMatches : matchIds;
+
+    if (ids.length === 1) {
+      // Single match — done!
+      endSession(code!).then(() => {
+        router.replace({ pathname: '/group-result', params: { code } });
+      });
+    } else if (ids.length > 1) {
+      // Multiple matches — start next round with just those cards
+      const cardMap = new Map(sess.cards.map((c) => [c.id, c]));
+      const nextCards = ids.map((id) => cardMap.get(id)).filter(Boolean) as CardItem[];
+      startNextRound(code!, nextCards);
+    } else {
+      // Somehow no matches anymore — end
+      endSession(code!).then(() => {
+        router.replace({ pathname: '/group-result', params: { code } });
+      });
+    }
+  }
 
   const handleSwipeRight = useCallback(
     async (card: CardItem) => {
@@ -64,11 +138,18 @@ export default function GroupSwipeScreen() {
     [code, deviceId]
   );
 
-  const handleEmpty = useCallback(async () => {
-    if (code && deviceId) {
-      await markCompleted(code, deviceId);
+  const handleEmpty = useCallback(() => {
+    // Participant exhausted all cards. Match detection in the listener
+    // will handle hopeless participant check.
+    // If match banner is already showing, resolve immediately.
+    if (matchBanner && session) {
+      const liveMatches = computeLiveMatches(session);
+      if (liveMatches.length > 0) {
+        if (graceTimerRef.current) clearTimeout(graceTimerRef.current);
+        handleMatchResolution(session, liveMatches);
+      }
     }
-  }, [code, deviceId]);
+  }, [matchBanner, session, code]);
 
   const isCreator = session?.createdBy === deviceId;
 
@@ -100,6 +181,8 @@ export default function GroupSwipeScreen() {
     );
   }
 
+  const currentRound = session.round ?? 1;
+
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.headerRow}>
@@ -111,6 +194,19 @@ export default function GroupSwipeScreen() {
         </Text>
         <Text style={styles.code}>{code}</Text>
       </View>
+
+      <Text style={styles.instruction}>
+        {currentRound > 1
+          ? `Round ${currentRound} — Narrow it down!`
+          : 'Select as many options as you like!\nWhaTo will end when everyone has matched.'}
+      </Text>
+
+      {matchBanner && (
+        <View style={styles.matchBanner}>
+          <Text style={styles.matchBannerText}>Match found! Wrapping up...</Text>
+        </View>
+      )}
+
       <SwipeDeck
         cards={cards}
         onSwipeRight={handleSwipeRight}
@@ -143,17 +239,39 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.md,
   },
-  header: {
-    ...typography.subtitle,
-  },
   exitText: {
     ...typography.caption,
     color: colors.danger,
     fontWeight: '600',
   },
+  header: {
+    ...typography.subtitle,
+  },
   code: {
     ...typography.caption,
     color: colors.textSecondary,
+  },
+  instruction: {
+    ...typography.caption,
+    color: colors.textSecondary,
+    textAlign: 'center',
+    paddingHorizontal: spacing.xl,
+    marginBottom: spacing.sm,
+    lineHeight: 20,
+  },
+  matchBanner: {
+    backgroundColor: colors.success,
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.md,
+    marginHorizontal: spacing.md,
+    borderRadius: 12,
+    marginBottom: spacing.sm,
+    alignItems: 'center',
+  },
+  matchBannerText: {
+    ...typography.body,
+    color: '#FFFFFF',
+    fontWeight: '700',
   },
   hints: {
     flexDirection: 'row',

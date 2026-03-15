@@ -15,6 +15,9 @@ import {
   generateSessionCode,
   isSessionExpired,
   computeMatches,
+  computeLiveMatches,
+  hasHopelessParticipant,
+  SessionData,
 } from '../../src/services/sessionService';
 
 describe('generateSessionCode', () => {
@@ -62,5 +65,76 @@ describe('computeMatches', () => {
     const result = computeMatches(noMatch);
     expect(result.unanimous).toEqual([]);
     expect(result.majority).toEqual([]);
+  });
+});
+
+function makeSession(participants: SessionData['participants'], cards?: { id: string }[]): SessionData {
+  return {
+    topic: 'food',
+    status: 'active',
+    createdBy: 'user1',
+    createdAt: Date.now(),
+    cards: (cards ?? [{ id: 'a' }, { id: 'b' }, { id: 'c' }]) as any,
+    participants,
+  };
+}
+
+describe('computeLiveMatches', () => {
+  it('finds a card both participants have right-swiped', () => {
+    const session = makeSession({
+      user1: { name: 'Alice', joinedAt: 0, swipes: { a: true, b: false } },
+      user2: { name: 'Bob', joinedAt: 0, swipes: { a: true } },
+    });
+    expect(computeLiveMatches(session)).toEqual(['a']);
+  });
+
+  it('returns empty when no overlap yet', () => {
+    const session = makeSession({
+      user1: { name: 'Alice', joinedAt: 0, swipes: { a: true } },
+      user2: { name: 'Bob', joinedAt: 0, swipes: { b: true } },
+    });
+    expect(computeLiveMatches(session)).toEqual([]);
+  });
+
+  it('returns empty when only one person has swiped yes on a card', () => {
+    const session = makeSession({
+      user1: { name: 'Alice', joinedAt: 0, swipes: { a: true } },
+      user2: { name: 'Bob', joinedAt: 0, swipes: { a: false } },
+    });
+    expect(computeLiveMatches(session)).toEqual([]);
+  });
+
+  it('returns multiple matches', () => {
+    const session = makeSession({
+      user1: { name: 'Alice', joinedAt: 0, swipes: { a: true, b: true } },
+      user2: { name: 'Bob', joinedAt: 0, swipes: { a: true, b: true } },
+    });
+    expect(computeLiveMatches(session).sort()).toEqual(['a', 'b']);
+  });
+});
+
+describe('hasHopelessParticipant', () => {
+  it('returns true when someone swiped all cards with zero yes', () => {
+    const session = makeSession({
+      user1: { name: 'Alice', joinedAt: 0, swipes: { a: false, b: false, c: false } },
+      user2: { name: 'Bob', joinedAt: 0, swipes: { a: true } },
+    });
+    expect(hasHopelessParticipant(session)).toBe(true);
+  });
+
+  it('returns false when everyone has at least one yes', () => {
+    const session = makeSession({
+      user1: { name: 'Alice', joinedAt: 0, swipes: { a: true, b: false } },
+      user2: { name: 'Bob', joinedAt: 0, swipes: { a: false, b: true } },
+    });
+    expect(hasHopelessParticipant(session)).toBe(false);
+  });
+
+  it('returns false when not all cards are swiped yet', () => {
+    const session = makeSession({
+      user1: { name: 'Alice', joinedAt: 0, swipes: { a: false, b: false } },
+      user2: { name: 'Bob', joinedAt: 0, swipes: { a: true } },
+    });
+    expect(hasHopelessParticipant(session)).toBe(false);
   });
 });
