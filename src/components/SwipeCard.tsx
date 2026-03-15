@@ -2,6 +2,7 @@ import React from 'react';
 import { View, Text, Image, StyleSheet, Dimensions } from 'react-native';
 import { CardItem } from '../providers/types';
 import { colors, spacing, typography, cardStyle } from '../theme';
+import { StarRating } from './StarRating';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const CARD_WIDTH = SCREEN_WIDTH - spacing.xl * 2;
@@ -27,9 +28,7 @@ export function SwipeCard({ card }: SwipeCardProps) {
             {card.title}
           </Text>
           {card.rating != null && (
-            <View style={styles.ratingBadge}>
-              <Text style={styles.ratingText}>{card.rating}</Text>
-            </View>
+            <StarRating rating={card.rating} size={18} />
           )}
         </View>
         <Text style={styles.subtitle}>{card.subtitle}</Text>
@@ -84,16 +83,5 @@ const styles = StyleSheet.create({
   detail: {
     ...typography.caption,
     marginTop: spacing.xs,
-  },
-  ratingBadge: {
-    backgroundColor: colors.primary,
-    borderRadius: 8,
-    paddingHorizontal: spacing.sm,
-    paddingVertical: spacing.xs,
-  },
-  ratingText: {
-    ...typography.caption,
-    color: colors.text,
-    fontWeight: '700',
   },
 });

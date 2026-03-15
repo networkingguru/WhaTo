@@ -27,9 +27,10 @@ describe('SwipeCard', () => {
     expect(getByText('Detail 2')).toBeTruthy();
   });
 
-  it('renders rating when provided', () => {
-    const { getByText } = render(<SwipeCard card={mockCard} />);
-    expect(getByText('4.2')).toBeTruthy();
+  it('renders star rating when provided', () => {
+    const { getAllByTestId } = render(<SwipeCard card={mockCard} />);
+    const filled = getAllByTestId('star-filled');
+    expect(filled.length).toBe(4);
   });
 
   it('handles null imageUrl gracefully', () => {

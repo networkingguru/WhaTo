@@ -4,6 +4,7 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import * as Location from 'expo-location';
 import { SwipeDeck } from '../src/components/SwipeDeck';
+import { CardDetail } from '../src/components/CardDetail';
 import { RadiusSelector } from '../src/components/RadiusSelector';
 import { useCards } from '../src/hooks/useCards';
 import { Topic, CardItem } from '../src/providers/types';
@@ -15,6 +16,7 @@ export default function SwipeScreen() {
   const topic = params.topic as Topic;
   const router = useRouter();
   const [radius, setRadius] = useState(5);
+  const [detailCard, setDetailCard] = useState<CardItem | null>(null);
   const [location, setLocation] = useState<{ latitude: number; longitude: number } | undefined>();
   const [locationLoading, setLocationLoading] = useState(topic === 'food');
   const [locationError, setLocationError] = useState<string | null>(null);
@@ -142,7 +144,16 @@ export default function SwipeScreen() {
         onSwipeRight={handleSwipeRight}
         onSwipeLeft={handleSwipeLeft}
         onEmpty={handleEmpty}
+        onTap={(card) => setDetailCard(card)}
       />
+      {detailCard && (
+        <CardDetail
+          card={detailCard}
+          visible={true}
+          onClose={() => setDetailCard(null)}
+          topic={topic}
+        />
+      )}
       <View style={styles.hints}>
         <Text style={typography.caption}>← Nope</Text>
         <Text style={typography.caption}>Yes! →</Text>

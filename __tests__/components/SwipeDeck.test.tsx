@@ -30,8 +30,12 @@ jest.mock('react-native-gesture-handler', () => {
     GestureDetector: ({ children }: any) => children,
     Gesture: {
       Pan: () => ({
-        onUpdate: (cb: any) => ({ onEnd: (cb2: any) => ({ onUpdate: cb, onEnd: cb2 }) }),
+        onUpdate: () => ({ onEnd: () => ({ onUpdate: () => ({}), onEnd: () => ({}) }) }),
       }),
+      Tap: () => ({
+        onEnd: () => ({ onEnd: () => ({}) }),
+      }),
+      Exclusive: (...gestures: any[]) => gestures[0],
     },
   };
 });

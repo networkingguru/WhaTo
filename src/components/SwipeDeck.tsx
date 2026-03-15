@@ -22,9 +22,10 @@ interface SwipeDeckProps {
   onSwipeRight: (card: CardItem) => void;
   onSwipeLeft: (card: CardItem) => void;
   onEmpty: () => void;
+  onTap?: (card: CardItem) => void;
 }
 
-export function SwipeDeck({ cards, onSwipeRight, onSwipeLeft, onEmpty }: SwipeDeckProps) {
+export function SwipeDeck({ cards, onSwipeRight, onSwipeLeft, onEmpty, onTap }: SwipeDeckProps) {
   const [currentIndex, setCurrentIndex] = useState(0);
   const translateX = useSharedValue(0);
   const translateY = useSharedValue(0);
@@ -58,7 +59,7 @@ export function SwipeDeck({ cards, onSwipeRight, onSwipeLeft, onEmpty }: SwipeDe
     [currentIndex, cards, onSwipeRight, onSwipeLeft, translateX, translateY]
   );
 
-  const gesture = Gesture.Pan()
+  const panGesture = Gesture.Pan()
     .onUpdate((event) => {
       translateX.value = event.translationX;
       translateY.value = event.translationY;
@@ -76,6 +77,14 @@ export function SwipeDeck({ cards, onSwipeRight, onSwipeLeft, onEmpty }: SwipeDe
         translateY.value = withSpring(0);
       }
     });
+
+  const tapGesture = Gesture.Tap().onEnd(() => {
+    if (onTap && cards[currentIndex]) {
+      runOnJS(onTap)(cards[currentIndex]);
+    }
+  });
+
+  const gesture = Gesture.Exclusive(panGesture, tapGesture);
 
   const animatedStyle = useAnimatedStyle(() => ({
     transform: [
