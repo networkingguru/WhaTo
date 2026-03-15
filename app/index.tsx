@@ -1,15 +1,18 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { TopicButton } from '../src/components/TopicButton';
 import { Logo } from '../src/components/Logo';
+import { SparkleButton } from '../src/components/SparkleButton';
+import { SupportPanel } from '../src/components/SupportPanel';
 import { colors, spacing, typography } from '../src/theme';
 import { Topic } from '../src/providers/types';
 import { topicDisplayNames, topicColors } from '../src/utils/topicLabels';
 
 export default function HomeScreen() {
   const router = useRouter();
+  const [supportVisible, setSupportVisible] = useState(false);
 
   function handleTopic(topic: Topic) {
     router.push({ pathname: '/swipe', params: { topic } });
@@ -17,6 +20,10 @@ export default function HomeScreen() {
 
   return (
     <SafeAreaView style={styles.container}>
+      <View style={styles.sparkleContainer}>
+        <SparkleButton onPress={() => setSupportVisible(true)} />
+      </View>
+      <SupportPanel visible={supportVisible} onClose={() => setSupportVisible(false)} />
       <View style={styles.header}>
         <Logo />
         <Text style={styles.tagline}>What do you feel like?</Text>
@@ -35,6 +42,12 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: colors.background,
     paddingHorizontal: spacing.xl,
+  },
+  sparkleContainer: {
+    position: 'absolute',
+    top: spacing.xl,
+    right: spacing.md,
+    zIndex: 10,
   },
   header: {
     flex: 1,
