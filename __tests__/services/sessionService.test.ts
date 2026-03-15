@@ -4,7 +4,6 @@ jest.mock('firebase/database', () => ({
   get: jest.fn(),
   onValue: jest.fn(),
   update: jest.fn(),
-  off: jest.fn(),
 }));
 
 jest.mock('../../src/services/firebase', () => ({

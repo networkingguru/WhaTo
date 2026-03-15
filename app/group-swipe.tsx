@@ -29,6 +29,7 @@ export default function GroupSwipeScreen() {
   const [matchBanner, setMatchBanner] = useState(false);
   const graceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const matchHandledRef = useRef(false);
+  const cardsLoadedRef = useRef(false);
 
   useEffect(() => {
     getDeviceId().then(setDeviceId);
@@ -45,23 +46,25 @@ export default function GroupSwipeScreen() {
       if (data?.cards && dataRound !== round) {
         setRound(dataRound);
         setCards([...data.cards]);
+        cardsLoadedRef.current = true;
         setMatchBanner(false);
         matchHandledRef.current = false;
         if (graceTimerRef.current) {
           clearTimeout(graceTimerRef.current);
           graceTimerRef.current = null;
         }
-      } else if (data?.cards && cards.length === 0) {
+      } else if (data?.cards && !cardsLoadedRef.current) {
         setCards([...data.cards]);
+        cardsLoadedRef.current = true;
       }
 
       // Session ended externally
-      if (data?.status === 'complete') {
+      if (data?.status === 'complete' && !matchHandledRef.current) {
         router.replace({ pathname: '/group-result', params: { code } });
       }
     });
     return unsub;
-  }, [code, router, round, cards.length]);
+  }, [code, router, round]);
 
   // Real-time match detection
   useEffect(() => {

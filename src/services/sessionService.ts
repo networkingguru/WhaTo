@@ -1,4 +1,4 @@
-import { ref, set, get, onValue, update, off } from 'firebase/database';
+import { ref, set, get, onValue, update } from 'firebase/database';
 import { database } from './firebase';
 import { CardItem, Topic } from '../providers/types';
 
@@ -182,10 +182,10 @@ export function listenToSession(
   callback: (session: SessionData | null) => void
 ): () => void {
   const sessionRef = ref(database, `sessions/${code}`);
-  const handler = onValue(sessionRef, (snapshot) => {
+  const unsubscribe = onValue(sessionRef, (snapshot) => {
     callback(snapshot.exists() ? (snapshot.val() as SessionData) : null);
   });
-  return () => off(sessionRef, 'value', handler);
+  return unsubscribe;
 }
 
 export async function getSession(code: string): Promise<SessionData | null> {
