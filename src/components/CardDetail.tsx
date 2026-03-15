@@ -70,9 +70,9 @@ function getActionButtons(card: CardItem, topic: Topic): { label: string; url: s
 export function CardDetail({ card, visible, onClose, topic }: CardDetailProps) {
   const panResponder = useRef(
     PanResponder.create({
-      onMoveShouldSetPanResponder: (_, g) => g.dy > 10 && Math.abs(g.dy) > Math.abs(g.dx),
+      onMoveShouldSetPanResponder: (_, g) => g.dy > 5 && Math.abs(g.dy) > Math.abs(g.dx),
       onPanResponderRelease: (_, g) => {
-        if (g.dy > 80) onClose();
+        if (g.dy > 30) onClose();
       },
     })
   ).current;

@@ -1,7 +1,8 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, TextInput, Alert, ActivityIndicator, TouchableOpacity, ScrollView } from 'react-native';
 import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import * as Device from 'expo-device';
 import { TopicButton } from '../src/components/TopicButton';
 import { Logo } from '../src/components/Logo';
 import { SparkleButton } from '../src/components/SparkleButton';
@@ -26,6 +27,17 @@ export default function HomeScreen() {
 
   const isGroupMode = mode === 'group';
 
+  // Pre-populate display name from device name (e.g., "Brian's iPhone" → "Brian")
+  useEffect(() => {
+    const devName = Device.deviceName;
+    if (devName && !displayName) {
+      const match = devName.match(/^(.+?)['']s\s/i);
+      if (match) {
+        setDisplayName(match[1]);
+      }
+    }
+  }, []);
+
   function handleTopicPress(topic: Topic) {
     if (isGroupMode) {
       setGroupTopic(topic);
@@ -39,7 +51,7 @@ export default function HomeScreen() {
     setMode('solo');
     setGroupPhase('pick');
     setGroupTopic(null);
-    setDisplayName('');
+    // Keep displayName so it persists across group mode toggling
   }
 
   const providers = { movie: movieProvider, show: showProvider, food: restaurantProvider };
@@ -77,8 +89,9 @@ export default function HomeScreen() {
       await createSession(code, groupTopic, deviceId, displayName.trim(), cards, location);
       resetToSolo();
       router.push({ pathname: '/lobby', params: { code, topic: groupTopic, isCreator: 'true' } });
-    } catch {
-      Alert.alert('Error', 'Could not create session. Please try again.');
+    } catch (err) {
+      console.error('Group creation failed:', err);
+      Alert.alert('Error', `Could not create session: ${err instanceof Error ? err.message : 'Unknown error'}`);
       setGroupPhase('enter-name');
     }
   }
@@ -131,7 +144,7 @@ export default function HomeScreen() {
 
         {isGroupMode && groupPhase === 'enter-name' && (
           <View style={styles.groupForm}>
-            <Text style={styles.groupTitle}>Your display name</Text>
+            <Text style={[styles.groupTitle, styles.groupTitleWhite]}>Your display name</Text>
             <TextInput
               style={styles.nameInput}
               value={displayName}
@@ -153,7 +166,7 @@ export default function HomeScreen() {
         {isGroupMode && groupPhase === 'creating' && (
           <View style={styles.groupForm}>
             <ActivityIndicator size="large" color={colors.primary} />
-            <Text style={[typography.body, { marginTop: spacing.md }]}>Creating session...</Text>
+            <Text style={[typography.body, { marginTop: spacing.md, color: '#FFFFFF' }]}>Creating session...</Text>
           </View>
         )}
 
@@ -279,6 +292,9 @@ const styles = StyleSheet.create({
     ...typography.subtitle,
     textAlign: 'center',
   },
+  groupTitleWhite: {
+    color: '#FFFFFF',
+  },
   nameInput: {
     backgroundColor: colors.surface,
     borderRadius: 12,
@@ -307,6 +323,6 @@ const styles = StyleSheet.create({
   },
   backLinkText: {
     ...typography.caption,
-    color: colors.tertiary,
+    color: '#FFFFFF',
   },
 });
