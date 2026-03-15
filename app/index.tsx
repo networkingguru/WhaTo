@@ -31,9 +31,24 @@ export default function HomeScreen() {
   useEffect(() => {
     const devName = Device.deviceName;
     if (devName && !displayName) {
-      const match = devName.match(/^(.+?)['']s\s/i);
+      const match = devName.match(/^(.+?)[''\u2019]s\s/i);
       if (match) {
-        setDisplayName(match[1]);
+        const candidate = match[1].trim();
+        // Only use it if it looks like a real name:
+        // - all letters (allow hyphens/spaces for compound names)
+        // - not a common non-name device word
+        // - reasonable length (2-20 chars)
+        const NON_NAMES = [
+          'my', 'the', 'this', 'new', 'old', 'red', 'blue', 'big', 'dad', 'mom',
+          'work', 'home', 'test', 'guest', 'admin', 'user', 'phone', 'device',
+          'iphone', 'ipad', 'mac', 'macbook', 'pixel', 'samsung', 'galaxy',
+        ];
+        const isAllLetters = /^[a-zA-Z][a-zA-Z \-']{0,19}$/.test(candidate);
+        const isNotCommonWord = !NON_NAMES.includes(candidate.toLowerCase());
+        const isReasonableLength = candidate.length >= 2 && candidate.length <= 20;
+        if (isAllLetters && isNotCommonWord && isReasonableLength) {
+          setDisplayName(candidate);
+        }
       }
     }
   }, []);
