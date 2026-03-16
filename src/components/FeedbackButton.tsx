@@ -1,6 +1,6 @@
 import React from 'react';
 import { TouchableOpacity, StyleSheet, Text } from 'react-native';
-import { colors } from '../theme';
+import { colors, spacing } from '../theme';
 
 interface FeedbackButtonProps {
   onPress: () => void;
@@ -13,27 +13,22 @@ export function FeedbackButton({ onPress }: FeedbackButtonProps) {
       testID="feedback-button"
       activeOpacity={0.7}
       style={styles.button}
+      hitSlop={12}
     >
-      <Text style={styles.icon}>!</Text>
+      <Text style={styles.label}>Report a problem</Text>
     </TouchableOpacity>
   );
 }
 
 const styles = StyleSheet.create({
   button: {
-    width: 28,
-    height: 28,
-    borderRadius: 14,
-    borderWidth: 1.5,
-    borderColor: colors.textSecondary,
-    alignItems: 'center',
-    justifyContent: 'center',
-    opacity: 0.5,
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.md,
   },
-  icon: {
-    fontSize: 15,
-    fontWeight: '800',
+  label: {
+    fontSize: 12,
     color: colors.textSecondary,
-    marginTop: -1,
+    opacity: 0.6,
+    textDecorationLine: 'underline',
   },
 });

@@ -140,9 +140,6 @@ export default function HomeScreen() {
 
   return (
     <SafeAreaView style={[styles.container, isGroupMode && styles.containerGroupMode]}>
-      <View style={styles.feedbackContainer}>
-        <FeedbackButton onPress={() => setFeedbackVisible(true)} />
-      </View>
       <View style={styles.sparkleContainer}>
         <SparkleButton onPress={() => setSupportVisible(true)} />
       </View>
@@ -250,6 +247,9 @@ export default function HomeScreen() {
           </View>
         )}
       </View>
+      <View style={styles.feedbackContainer}>
+        <FeedbackButton onPress={() => setFeedbackVisible(true)} />
+      </View>
     </SafeAreaView>
   );
 }
@@ -264,10 +264,8 @@ const styles = StyleSheet.create({
     backgroundColor: colors.tertiary,
   },
   feedbackContainer: {
-    position: 'absolute',
-    top: spacing.xl,
-    left: spacing.md,
-    zIndex: 10,
+    alignItems: 'center',
+    paddingBottom: spacing.md,
   },
   sparkleContainer: {
     position: 'absolute',
