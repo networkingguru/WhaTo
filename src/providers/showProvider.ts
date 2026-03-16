@@ -42,7 +42,7 @@ export const showProvider: CardProvider = {
         const params = new URLSearchParams({
           page: String(page),
           sort_by: options.sortTmdb === 'rating' ? 'vote_average.desc' : 'popularity.desc',
-          'vote_count.gte': '50',
+          'vote_count.gte': '300',
         });
         if (hasGenres) {
           params.set('with_genres', options.genreIds!.join(','));
