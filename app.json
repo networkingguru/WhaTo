@@ -1,6 +1,6 @@
 {
   "expo": {
-    "name": "Whato",
+    "name": "WhaTo",
     "slug": "whato",
     "scheme": "whato",
     "version": "1.0.0",
@@ -18,14 +18,20 @@
     },
     "ios": {
       "supportsTablet": false,
-      "bundleIdentifier": "com.whato.app"
+      "bundleIdentifier": "com.whato.app",
+      "buildNumber": "1",
+      "infoPlist": {
+        "NSLocationWhenInUseUsageDescription": "WhaTo uses your location to find nearby restaurants.",
+        "ITSAppUsesNonExemptEncryption": false
+      }
     },
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/android-icon-foreground.png",
         "backgroundColor": "#ffffff"
       },
-      "package": "com.whato.app"
+      "package": "com.whato.app",
+      "versionCode": 1
     },
     "web": {
       "bundler": "metro"
