@@ -195,6 +195,11 @@ export default function SwipeScreen() {
         <Text style={typography.caption}>← Nope</Text>
         <Text style={typography.caption}>Yes! →</Text>
       </View>
+      <Text style={styles.attribution}>
+        {topic === 'food'
+          ? 'Powered by Yelp'
+          : 'This product uses the TMDB API but is not endorsed or certified by TMDB.'}
+      </Text>
     </SafeAreaView>
   );
 }
@@ -247,5 +252,12 @@ const styles = StyleSheet.create({
     ...typography.caption,
     color: colors.primary,
     textDecorationLine: 'underline' as const,
+  },
+  attribution: {
+    fontSize: 10,
+    color: colors.textSecondary,
+    textAlign: 'center' as const,
+    paddingBottom: spacing.sm,
+    opacity: 0.6,
   },
 });

@@ -30,6 +30,7 @@ const LINKS = [
   { label: 'Buy me a coffee', url: 'https://patreon.com/NetworkingGuru?utm_medium=unknown&utm_source=join_link&utm_campaign=creatorshare_creator&utm_content=copyLink', icon: '☕' },
   { label: 'Watch me on YouTube', url: 'https://youtube.com/@brianondrumsyt?si=feBQ_mEwWGHRdNli', icon: '🎬' },
   { label: 'Rate & share the app', url: 'store-review', icon: '⭐' },
+  { label: 'Privacy Policy', url: 'https://YOUR_GITHUB_USERNAME.github.io/YOUR_REPO_NAME/privacy-policy', icon: '🔒' },
 ];
 
 const ROLL_DURATION = 500;

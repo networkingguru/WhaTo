@@ -133,7 +133,6 @@ export default function HomeScreen() {
       resetToSolo();
       router.push({ pathname: '/lobby', params: { code, topic: groupTopic, isCreator: 'true' } });
     } catch (err) {
-      console.error('Group creation failed:', err);
       Alert.alert('Error', `Could not create session: ${err instanceof Error ? err.message : 'Unknown error'}`);
       setGroupPhase('enter-name');
     }
