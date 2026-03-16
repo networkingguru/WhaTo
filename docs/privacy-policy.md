@@ -56,7 +56,7 @@ If we update this policy, we'll post the new version here with an updated effect
 
 ## Contact
 
-If you have questions about this privacy policy, contact us at: **[CONTACT_EMAIL]**
+If you have questions about this privacy policy, contact us at: **whato.feedback@gmail.com**
 
 ---
 
