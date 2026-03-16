@@ -20,9 +20,9 @@ import {
 } from '../../src/services/sessionService';
 
 describe('generateSessionCode', () => {
-  it('returns a code in WHATO-XXXX format', () => {
+  it('returns a 4-letter uppercase code', () => {
     const code = generateSessionCode();
-    expect(code).toMatch(/^WHATO-[A-Z0-9]{4}$/);
+    expect(code).toMatch(/^[A-Z]{4}$/);
   });
 });
 

@@ -29,6 +29,7 @@ export function SwipeDeck({ cards, onSwipeRight, onSwipeLeft, onEmpty, onTap }: 
   const [currentIndex, setCurrentIndex] = useState(0);
   const translateX = useSharedValue(0);
   const translateY = useSharedValue(0);
+  const cardOpacity = useSharedValue(1);
 
   const currentCard = cards[currentIndex];
   const nextCard = cards[currentIndex + 1];
@@ -36,6 +37,9 @@ export function SwipeDeck({ cards, onSwipeRight, onSwipeLeft, onEmpty, onTap }: 
   useEffect(() => {
     if (currentIndex >= cards.length) {
       onEmpty();
+    } else {
+      // Show card after React renders the new card (prevents blink)
+      cardOpacity.value = 1;
     }
   }, [currentIndex, cards.length, onEmpty]);
 
@@ -52,9 +56,10 @@ export function SwipeDeck({ cards, onSwipeRight, onSwipeLeft, onEmpty, onTap }: 
       } else {
         onSwipeLeft(card);
       }
-      setCurrentIndex((i) => i + 1);
+      cardOpacity.value = 0;
       translateX.value = 0;
       translateY.value = 0;
+      setCurrentIndex((i) => i + 1);
     },
     [currentIndex, cards, onSwipeRight, onSwipeLeft, translateX, translateY]
   );
@@ -87,6 +92,7 @@ export function SwipeDeck({ cards, onSwipeRight, onSwipeLeft, onEmpty, onTap }: 
   const gesture = Gesture.Exclusive(panGesture, tapGesture);
 
   const animatedStyle = useAnimatedStyle(() => ({
+    opacity: cardOpacity.value,
     transform: [
       { translateX: translateX.value },
       { translateY: translateY.value },

@@ -53,7 +53,7 @@ export default function JoinScreen() {
           style={styles.input}
           value={code}
           onChangeText={setCode}
-          placeholder="WHATO-XXXX"
+          placeholder="ABCD"
           placeholderTextColor={colors.textSecondary}
           autoCapitalize="characters"
           autoCorrect={false}

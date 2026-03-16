@@ -11,7 +11,7 @@ export default function RootLayout() {
   useEffect(() => {
     function handleUrl(event: { url: string }) {
       const parsed = Linking.parse(event.url);
-      // URL format: whato://join/WHATO-7K3M → parsed.path = "join/WHATO-7K3M"
+      // URL format: whato://join/ABCD → parsed.path = "join/ABCD"
       if (parsed.path?.startsWith('join/')) {
         const code = parsed.path.split('/')[1];
         if (code) {

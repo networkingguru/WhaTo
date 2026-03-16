@@ -33,12 +33,12 @@ export interface MatchResult {
 }
 
 export function generateSessionCode(): string {
-  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ';
   let code = '';
   for (let i = 0; i < 4; i++) {
     code += chars.charAt(Math.floor(Math.random() * chars.length));
   }
-  return `WHATO-${code}`;
+  return code;
 }
 
 export function isSessionExpired(createdAt: number): boolean {

@@ -7,6 +7,9 @@ import { TopicButton } from '../src/components/TopicButton';
 import { Logo } from '../src/components/Logo';
 import { SparkleButton } from '../src/components/SparkleButton';
 import { SupportPanel } from '../src/components/SupportPanel';
+import { SearchOptions, FoodFilters, MediaFilters } from '../src/components/SearchOptions';
+import { FeedbackButton } from '../src/components/FeedbackButton';
+import { FeedbackModal } from '../src/components/FeedbackModal';
 import { colors, spacing, typography } from '../src/theme';
 import { Topic } from '../src/providers/types';
 import { topicDisplayNames, topicColors } from '../src/utils/topicLabels';
@@ -27,6 +30,17 @@ export default function HomeScreen() {
   const [groupPhase, setGroupPhase] = useState<'pick' | 'enter-name' | 'creating'>('pick');
   const [groupTopic, setGroupTopic] = useState<Topic | null>(null);
   const [displayName, setDisplayName] = useState('');
+  const [optionsVisible, setOptionsVisible] = useState(false);
+  const [feedbackVisible, setFeedbackVisible] = useState(false);
+  const [foodFilters, setFoodFilters] = useState<FoodFilters>({
+    openNow: true,
+    categories: [],
+    sortBy: 'best_match',
+  });
+  const [mediaFilters, setMediaFilters] = useState<MediaFilters>({
+    genreIds: [],
+    sortTmdb: 'popularity',
+  });
 
   const isGroupMode = mode === 'group';
 
@@ -87,13 +101,19 @@ export default function HomeScreen() {
       const code = generateSessionCode();
       const deviceId = await getDeviceId();
 
-      let fetchOptions: { latitude?: number; longitude?: number } = {};
+      let fetchOptions: Record<string, any> = {};
       if (groupTopic === 'food') {
         const { status } = await Location.requestForegroundPermissionsAsync();
         if (status === 'granted') {
           const loc = await Location.getCurrentPositionAsync({});
           fetchOptions = { latitude: loc.coords.latitude, longitude: loc.coords.longitude };
         }
+        fetchOptions.openNow = foodFilters.openNow;
+        if (foodFilters.categories.length > 0) fetchOptions.categories = foodFilters.categories;
+        fetchOptions.sortBy = foodFilters.sortBy;
+      } else {
+        if (mediaFilters.genreIds.length > 0) fetchOptions.genreIds = mediaFilters.genreIds;
+        fetchOptions.sortTmdb = mediaFilters.sortTmdb;
       }
 
       const cards = await providers[groupTopic].fetchCards(fetchOptions);
@@ -121,10 +141,25 @@ export default function HomeScreen() {
 
   return (
     <SafeAreaView style={[styles.container, isGroupMode && styles.containerGroupMode]}>
+      <View style={styles.feedbackContainer}>
+        <FeedbackButton onPress={() => setFeedbackVisible(true)} />
+      </View>
       <View style={styles.sparkleContainer}>
         <SparkleButton onPress={() => setSupportVisible(true)} />
       </View>
       <SupportPanel visible={supportVisible} onClose={() => setSupportVisible(false)} />
+      <FeedbackModal visible={feedbackVisible} onClose={() => setFeedbackVisible(false)} />
+      {groupTopic && (
+        <SearchOptions
+          visible={optionsVisible}
+          topic={groupTopic}
+          foodFilters={foodFilters}
+          mediaFilters={mediaFilters}
+          onApplyFood={setFoodFilters}
+          onApplyMedia={setMediaFilters}
+          onClose={() => setOptionsVisible(false)}
+        />
+      )}
 
       <View style={styles.header}>
         <Logo />
@@ -177,6 +212,9 @@ export default function HomeScreen() {
               maxLength={20}
               autoCorrect={false}
             />
+            <TouchableOpacity style={styles.optionsButton} onPress={() => setOptionsVisible(true)}>
+              <Text style={styles.optionsButtonText}>Options</Text>
+            </TouchableOpacity>
             <TouchableOpacity style={styles.createButton} onPress={handleCreateGroup}>
               <Text style={styles.createButtonText}>Create Session</Text>
             </TouchableOpacity>
@@ -225,6 +263,12 @@ const styles = StyleSheet.create({
   },
   containerGroupMode: {
     backgroundColor: colors.tertiary,
+  },
+  feedbackContainer: {
+    position: 'absolute',
+    top: spacing.xl,
+    left: spacing.md,
+    zIndex: 10,
   },
   sparkleContainer: {
     position: 'absolute',
@@ -327,6 +371,21 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.textSecondary,
     width: '100%',
+  },
+  optionsButton: {
+    backgroundColor: 'transparent',
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.xl,
+    borderRadius: 16,
+    width: '100%',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#FFFFFF',
+  },
+  optionsButtonText: {
+    ...typography.body,
+    color: '#FFFFFF',
+    fontWeight: '600',
   },
   createButton: {
     backgroundColor: colors.primary,
