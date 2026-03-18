@@ -48,8 +48,12 @@ export default function GroupSwipeScreen() {
 
     const connectPresence = async () => {
       if (isConnectedRef.current) return;
-      isConnectedRef.current = true;
-      presenceCleanupRef.current = await setPresence(code, deviceId);
+      try {
+        presenceCleanupRef.current = await setPresence(code, deviceId);
+        isConnectedRef.current = true;
+      } catch {
+        // Allow retry on next AppState change
+      }
     };
 
     connectPresence();
@@ -191,7 +195,7 @@ export default function GroupSwipeScreen() {
         handleMatchResolution(session, liveMatches);
       }
     }
-  }, [matchBanner, session, code]);
+  }, [matchBanner, session, code, deviceId]);
 
   const isCreator = session?.createdBy === deviceId;
 
