@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, TextInput, TouchableOpacity, Alert, ActivityIndicator } from 'react-native';
+import { View, Text, StyleSheet, TextInput, TouchableOpacity, Alert, ActivityIndicator, KeyboardAvoidingView, Platform, Keyboard, TouchableWithoutFeedback } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { colors, spacing, typography } from '../src/theme';
@@ -49,43 +49,50 @@ export default function JoinScreen() {
         <Text style={styles.backButton}>← Back</Text>
       </TouchableOpacity>
 
-      <View style={styles.content}>
-        <Text style={styles.title}>Join Group</Text>
+      <KeyboardAvoidingView
+        style={styles.content}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      >
+        <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
+          <View style={styles.form}>
+            <Text style={styles.title}>Join Group</Text>
 
-        <Text style={styles.label}>Group Code</Text>
-        <TextInput
-          style={styles.input}
-          value={code}
-          onChangeText={setCode}
-          placeholder="ABCD"
-          placeholderTextColor={colors.textSecondary}
-          autoCapitalize="characters"
-          autoCorrect={false}
-        />
+            <Text style={styles.label}>Group Code</Text>
+            <TextInput
+              style={styles.input}
+              value={code}
+              onChangeText={setCode}
+              placeholder="ABCD"
+              placeholderTextColor={colors.textSecondary}
+              autoCapitalize="characters"
+              autoCorrect={false}
+            />
 
-        <Text style={styles.label}>Your Name</Text>
-        <TextInput
-          style={styles.input}
-          value={name}
-          onChangeText={setName}
-          placeholder="Enter your name"
-          placeholderTextColor={colors.textSecondary}
-          autoCorrect={false}
-          maxLength={20}
-        />
+            <Text style={styles.label}>Your Name</Text>
+            <TextInput
+              style={styles.input}
+              value={name}
+              onChangeText={setName}
+              placeholder="Enter your name"
+              placeholderTextColor={colors.textSecondary}
+              autoCorrect={false}
+              maxLength={20}
+            />
 
-        <TouchableOpacity
-          style={[styles.joinButton, joining && styles.buttonDisabled]}
-          onPress={handleJoin}
-          disabled={joining}
-        >
-          {joining ? (
-            <ActivityIndicator color="#FFFFFF" />
-          ) : (
-            <Text style={styles.joinText}>Join</Text>
-          )}
-        </TouchableOpacity>
-      </View>
+            <TouchableOpacity
+              style={[styles.joinButton, joining && styles.buttonDisabled]}
+              onPress={handleJoin}
+              disabled={joining}
+            >
+              {joining ? (
+                <ActivityIndicator color="#FFFFFF" />
+              ) : (
+                <Text style={styles.joinText}>Join</Text>
+              )}
+            </TouchableOpacity>
+          </View>
+        </TouchableWithoutFeedback>
+      </KeyboardAvoidingView>
     </SafeAreaView>
   );
 }
@@ -103,7 +110,11 @@ const styles = StyleSheet.create({
   },
   content: {
     flex: 1,
-    justifyContent: 'center',
+  },
+  form: {
+    flex: 1,
+    justifyContent: 'flex-start',
+    paddingTop: spacing.xl,
   },
   title: {
     ...typography.title,
