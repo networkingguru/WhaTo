@@ -1,4 +1,9 @@
+import { NativeModules } from 'react-native';
+
+const hasFirebase = !!NativeModules.RNFBAppModule;
+
 function getCrashlytics() {
+  if (!hasFirebase) return null;
   try {
     const mod = require('@react-native-firebase/crashlytics');
     return (mod.default ?? mod)();
