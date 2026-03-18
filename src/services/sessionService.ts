@@ -1,4 +1,4 @@
-import { ref, set, get, onValue, update } from 'firebase/database';
+import { ref, set, get, onValue, update, onDisconnect } from 'firebase/database';
 import { getDb } from './firebase';
 import { CardItem, Topic } from '../providers/types';
 
@@ -24,6 +24,8 @@ export interface ParticipantData {
   name: string;
   joinedAt: number;
   completed?: boolean;
+  connected?: boolean;
+  lastConnected?: number;
   swipes?: Record<string, boolean>;
 }
 

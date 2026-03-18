@@ -4,6 +4,7 @@ jest.mock('firebase/database', () => ({
   get: jest.fn(),
   onValue: jest.fn(),
   update: jest.fn(),
+  onDisconnect: jest.fn(() => ({ set: jest.fn(), cancel: jest.fn() })),
 }));
 
 jest.mock('../../src/services/firebase', () => ({
