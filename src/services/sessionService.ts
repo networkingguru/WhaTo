@@ -46,8 +46,8 @@ export async function setPresence(
   code: string,
   deviceId: string
 ): Promise<() => void> {
-  const connectedRef = ref(database, `sessions/${code}/participants/${deviceId}/connected`);
-  const lastConnectedRef = ref(database, `sessions/${code}/participants/${deviceId}/lastConnected`);
+  const connectedRef = ref(getDb(), `sessions/${code}/participants/${deviceId}/connected`);
+  const lastConnectedRef = ref(getDb(), `sessions/${code}/participants/${deviceId}/lastConnected`);
 
   await set(connectedRef, true);
   await set(lastConnectedRef, Date.now());

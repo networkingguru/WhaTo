@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { View, Text, Pressable, StyleSheet } from 'react-native';
 import { colors, spacing } from '../theme';
 import { ParticipantData, getParticipantStatus, ParticipantStatus } from '../services/sessionService';
@@ -23,6 +23,12 @@ const STATUS_LABELS: Record<ParticipantStatus, string> = {
 export function ParticipantBar({ participants, selfDeviceId }: ParticipantBarProps) {
   const [tooltip, setTooltip] = useState<{ name: string; status: ParticipantStatus; index: number } | null>(null);
   const tooltipTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (tooltipTimer.current) clearTimeout(tooltipTimer.current);
+    };
+  }, []);
 
   const others = Object.entries(participants)
     .filter(([id]) => id !== selfDeviceId)
