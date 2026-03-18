@@ -25,6 +25,12 @@ import { logError } from '../src/services/crashlytics';
 
 const DISPLAY_NAME_KEY = 'whato_display_name';
 
+const topicEmojis: Record<Topic, string> = {
+  food: '🍴',
+  movie: '🎬',
+  show: '📺',
+};
+
 export default function HomeScreen() {
   const router = useRouter();
   const [supportVisible, setSupportVisible] = useState(false);
@@ -141,7 +147,6 @@ export default function HomeScreen() {
       const trimmedName = displayName.trim();
       await AsyncStorage.setItem(DISPLAY_NAME_KEY, trimmedName);
       await createSession(code, selectedTopic, deviceId, trimmedName, cards, location);
-      trackTopicSelected(selectedTopic, 'group');
       trackGroupSessionCreated(selectedTopic);
       resetToHome();
       router.push({ pathname: '/lobby', params: { code, topic: selectedTopic, isCreator: 'true' } });
@@ -211,11 +216,11 @@ export default function HomeScreen() {
         {phase === 'choose-mode' && selectedTopic && (
           <View style={styles.modeChoice}>
             <Text style={styles.modeTopicTitle}>
-              {topicDisplayNames[selectedTopic]}
+              {topicEmojis[selectedTopic]} {topicDisplayNames[selectedTopic]}
             </Text>
             <TouchableOpacity
               style={styles.decideTogether}
-              onPress={() => setPhase('enter-name')}
+              onPress={() => { trackTopicSelected(selectedTopic, 'group'); setPhase('enter-name'); }}
             >
               <Text style={styles.decideTogetherText}>Decide Together</Text>
               <Text style={styles.decideSubtext}>Create a group</Text>
