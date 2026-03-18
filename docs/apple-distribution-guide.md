@@ -74,16 +74,17 @@ Open `eas.json` and replace the three placeholders under `submit.production.ios`
 ```
 Can't decide what to eat or watch? WhaTo helps you and your friends decide — fast.
 
-Swipe through nearby restaurants, trending movies, or popular shows. In solo mode, swipe right on what you like. In group mode, everyone swipes until you find a match.
+Pick a topic — Eat? Watch? Stream? — then decide together or go solo. In a group, everyone swipes until you match. On your own, swipe right on what you love.
 
 Features:
 • Swipe through restaurants near you, powered by Yelp
 • Browse trending movies and TV shows from TMDB
 • Filter by cuisine, genre, rating, and more
-• Group mode: create a session, invite friends, and match in real time
+• Decide together: create a group, invite friends via SMS, and match in real time
+• Decide solo: swipe on your own when you just need a pick
 • No account needed — just open and swipe
 
-No ads. No tracking. No data collection. Just decisions, made easier.
+No ads. No data collection. Just decisions, made easier.
 ```
 
 ### Keywords
@@ -95,8 +96,8 @@ restaurant,movie,group,decision,swipe,food,watch,tv,show,friend
 Select the following data types:
 - **Location:** "Used for app functionality" → "Not linked to user" → "Not used to track"
 - **Identifiers (Device ID):** "Used for app functionality" → "Not linked to user" → "Not used to track"
-
-That's it — no other data types apply.
+- **Diagnostics (Crash Data):** "Used for app functionality" → "Not linked to user" → "Not used to track" (Firebase Crashlytics)
+- **Usage Data (Product Interaction):** "Used for analytics" → "Not linked to user" → "Not used to track" (Firebase Analytics — anonymous screen views and events)
 
 ## Step 8: Screenshots (~10 min)
 
@@ -113,7 +114,7 @@ That's it — no other data types apply.
 1. After running `eas build`, or locally with `npx expo run:ios`
 2. Open Simulator → Device menu → choose the right device size
 3. Take screenshots with Cmd+S
-4. Capture 4-6 screens: home screen, swipe screen (food), swipe screen (movie), group mode, card detail, results
+4. Capture 4-6 screens: home screen, mode-choice screen, swipe screen (food), group lobby, card detail, group results
 
 **Option B: Real Device**
 Take screenshots on an actual iPhone and transfer them.
