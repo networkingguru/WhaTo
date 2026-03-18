@@ -11,6 +11,8 @@ import { useCards } from '../src/hooks/useCards';
 import { Topic, CardItem } from '../src/providers/types';
 import { colors, spacing, typography } from '../src/theme';
 import { topicDisplayNames } from '../src/utils/topicLabels';
+import { trackSoloSwipeRight, trackSoloDeckEmpty, trackCardDetailOpened } from '../src/services/analytics';
+import { logError } from '../src/services/crashlytics';
 
 export default function SwipeScreen() {
   const params = useLocalSearchParams<{ topic: string; pickedLatitude?: string; pickedLongitude?: string }>();
@@ -65,7 +67,8 @@ export default function SwipeScreen() {
           latitude: loc.coords.latitude,
           longitude: loc.coords.longitude,
         });
-      } catch {
+      } catch (err) {
+        logError(err, 'swipe_location');
         setLocationError('Could not determine your location. Please try again.');
       } finally {
         setLocationLoading(false);
@@ -96,6 +99,7 @@ export default function SwipeScreen() {
 
   const handleSwipeRight = useCallback(
     (card: CardItem) => {
+      trackSoloSwipeRight(topic);
       router.replace({
         pathname: '/result',
         params: {
@@ -117,8 +121,9 @@ export default function SwipeScreen() {
   }, []);
 
   const handleEmpty = useCallback(() => {
+    trackSoloDeckEmpty(topic);
     router.replace('/');
-  }, [router]);
+  }, [router, topic]);
 
   const isLoading = loading || locationLoading;
   const displayError = error || locationError;
@@ -172,7 +177,7 @@ export default function SwipeScreen() {
         onSwipeRight={handleSwipeRight}
         onSwipeLeft={handleSwipeLeft}
         onEmpty={handleEmpty}
-        onTap={(card) => setDetailCard(card)}
+        onTap={(card) => { trackCardDetailOpened(topic); setDetailCard(card); }}
       />
       {detailCard && (
         <CardDetail

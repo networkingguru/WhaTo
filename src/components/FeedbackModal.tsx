@@ -1,6 +1,7 @@
 import React from 'react';
 import { View, Text, StyleSheet, Modal, TouchableOpacity, Linking } from 'react-native';
 import { colors, spacing, typography } from '../theme';
+import { trackFeedbackLinkTapped } from '../services/analytics';
 
 const FORM_URL = 'https://docs.google.com/forms/d/e/1FAIpQLSc9zaITCo977EECID7TSLL2B2J33AAGuL6wZu0nkpgErMeZPg/viewform';
 
@@ -11,7 +12,7 @@ interface FeedbackModalProps {
 
 export function FeedbackModal({ visible, onClose }: FeedbackModalProps) {
   function openForm(type: 'Bug' | 'Feature') {
-    // pre-select the Type field via URL param (entry ID filled in after form creation)
+    trackFeedbackLinkTapped();
     const typeValue = type === 'Bug' ? 'Bug+Report' : 'Feature+Request';
     Linking.openURL(`${FORM_URL}?entry.1372637109=${typeValue}`);
     onClose();

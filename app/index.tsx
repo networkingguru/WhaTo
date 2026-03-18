@@ -20,6 +20,8 @@ import { showProvider } from '../src/providers/showProvider';
 import { restaurantProvider } from '../src/providers/restaurantProvider';
 import * as Location from 'expo-location';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { trackTopicSelected, trackGroupSessionCreated } from '../src/services/analytics';
+import { logError } from '../src/services/crashlytics';
 
 const DISPLAY_NAME_KEY = 'whato_display_name';
 
@@ -74,6 +76,7 @@ export default function HomeScreen() {
   }, []);
 
   function handleTopicPress(topic: Topic) {
+    trackTopicSelected(topic, isGroupMode ? 'group' : 'solo');
     if (isGroupMode) {
       setGroupTopic(topic);
       setGroupPhase('enter-name');
@@ -130,9 +133,11 @@ export default function HomeScreen() {
       const trimmedName = displayName.trim();
       await AsyncStorage.setItem(DISPLAY_NAME_KEY, trimmedName);
       await createSession(code, groupTopic, deviceId, trimmedName, cards, location);
+      trackGroupSessionCreated(groupTopic);
       resetToSolo();
       router.push({ pathname: '/lobby', params: { code, topic: groupTopic, isCreator: 'true' } });
     } catch (err) {
+      logError(err, 'handleCreateGroup');
       Alert.alert('Error', `Could not create session: ${err instanceof Error ? err.message : 'Unknown error'}`);
       setGroupPhase('enter-name');
     }

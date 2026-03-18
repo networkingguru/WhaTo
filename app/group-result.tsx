@@ -5,6 +5,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { colors, spacing, typography, cardStyle } from '../src/theme';
 import { getSession, computeMatches, SessionData } from '../src/services/sessionService';
 import { CardItem } from '../src/providers/types';
+import { trackGroupMatchFound, trackGroupNoMatch } from '../src/services/analytics';
 
 function getTopVotedCards(session: SessionData): CardItem[] {
   const participants = Object.values(session.participants || {});
@@ -36,6 +37,26 @@ export default function GroupResultScreen() {
       getSession(code).then(setSession);
     }
   }, [code]);
+
+  useEffect(() => {
+    if (!session) return;
+    if (isFailed) {
+      trackGroupNoMatch(session.topic);
+      return;
+    }
+    const matches = computeMatches(
+      session.participants as Record<string, { name: string; swipes: Record<string, boolean> }>
+    );
+    const cardMap = new Map(session.cards.map((c) => [c.id, c]));
+    const hasMatches =
+      matches.unanimous.some((id) => cardMap.has(id)) ||
+      matches.majority.some((id) => cardMap.has(id));
+    if (hasMatches) {
+      trackGroupMatchFound(session.topic);
+    } else {
+      trackGroupNoMatch(session.topic);
+    }
+  }, [session, isFailed]);
 
   if (!session) {
     return (

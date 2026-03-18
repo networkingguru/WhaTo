@@ -12,6 +12,8 @@ import {
   endSession,
   SessionData,
 } from '../src/services/sessionService';
+import { trackGroupSessionStarted } from '../src/services/analytics';
+import { logError } from '../src/services/crashlytics';
 
 export default function LobbyScreen() {
   const router = useRouter();
@@ -33,6 +35,8 @@ export default function LobbyScreen() {
     return unsub;
   }, [code, isCreator, router]);
 
+  const participants = session?.participants ? Object.values(session.participants) : [];
+
   const handleInvite = useCallback(async () => {
     const isAvailable = await SMS.isAvailableAsync();
     if (!isAvailable) {
@@ -48,12 +52,17 @@ export default function LobbyScreen() {
 
   const handleStart = useCallback(async () => {
     if (!code) return;
-    await startSession(code);
-    router.replace({
-      pathname: '/group-swipe',
-      params: { code },
-    });
-  }, [code, router]);
+    try {
+      await startSession(code);
+      trackGroupSessionStarted(topic as Topic, participants.length);
+      router.replace({
+        pathname: '/group-swipe',
+        params: { code },
+      });
+    } catch (err) {
+      logError(err, 'lobby_start_session');
+    }
+  }, [code, router, topic, participants.length]);
 
   const handleCancel = useCallback(async () => {
     if (code && isCreator === 'true') {
@@ -61,8 +70,6 @@ export default function LobbyScreen() {
     }
     router.replace('/');
   }, [code, isCreator, router]);
-
-  const participants = session?.participants ? Object.values(session.participants) : [];
 
   return (
     <SafeAreaView style={styles.container}>

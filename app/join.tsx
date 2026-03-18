@@ -5,6 +5,8 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { colors, spacing, typography } from '../src/theme';
 import { joinSession } from '../src/services/sessionService';
 import { getDeviceId } from '../src/services/deviceId';
+import { trackGroupSessionJoined } from '../src/services/analytics';
+import { logError } from '../src/services/crashlytics';
 
 export default function JoinScreen() {
   const router = useRouter();
@@ -25,6 +27,7 @@ export default function JoinScreen() {
       const result = await joinSession(code.trim().toUpperCase(), deviceId, name.trim());
 
       if (result.success) {
+        trackGroupSessionJoined();
         router.replace({
           pathname: '/lobby',
           params: { code: code.trim().toUpperCase(), topic: '', isCreator: 'false' },
@@ -32,7 +35,8 @@ export default function JoinScreen() {
       } else {
         Alert.alert('Could not join', result.error ?? 'Unknown error');
       }
-    } catch {
+    } catch (err) {
+      logError(err, 'join_session');
       Alert.alert('Error', "Couldn't connect — try again in a moment.");
     } finally {
       setJoining(false);

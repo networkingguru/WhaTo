@@ -18,6 +18,7 @@ import {
   SessionData,
 } from '../src/services/sessionService';
 import { getDeviceId } from '../src/services/deviceId';
+import { logError } from '../src/services/crashlytics';
 import { ParticipantBar } from '../src/components/ParticipantBar';
 import { LegendToast } from '../src/components/LegendToast';
 
@@ -149,7 +150,7 @@ export default function GroupSwipeScreen() {
       // Single match — done!
       endSession(code!).then(() => {
         router.replace({ pathname: '/group-result', params: { code } });
-      });
+      }).catch((err) => logError(err, 'group_end_session_match'));
     } else if (ids.length > 1) {
       // Multiple matches — start next round with just those cards
       const cardMap = new Map(sess.cards.map((c) => [c.id, c]));
@@ -159,14 +160,18 @@ export default function GroupSwipeScreen() {
       // Somehow no matches anymore — end
       endSession(code!).then(() => {
         router.replace({ pathname: '/group-result', params: { code } });
-      });
+      }).catch((err) => logError(err, 'group_end_session_no_match'));
     }
   }
 
   const handleSwipeRight = useCallback(
     async (card: CardItem) => {
       if (code && deviceId) {
-        await recordSwipe(code, deviceId, card.id, true);
+        try {
+          await recordSwipe(code, deviceId, card.id, true);
+        } catch (err) {
+          logError(err, 'group_swipe_right');
+        }
       }
     },
     [code, deviceId]
@@ -175,7 +180,11 @@ export default function GroupSwipeScreen() {
   const handleSwipeLeft = useCallback(
     async (card: CardItem) => {
       if (code && deviceId) {
-        await recordSwipe(code, deviceId, card.id, false);
+        try {
+          await recordSwipe(code, deviceId, card.id, false);
+        } catch (err) {
+          logError(err, 'group_swipe_left');
+        }
       }
     },
     [code, deviceId]
