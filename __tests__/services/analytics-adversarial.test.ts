@@ -6,20 +6,14 @@
  * the caller-supplied arguments are.
  */
 
-/* ---------- configurable mock ---------- */
-let mockLogEvent: jest.Mock;
-let mockLogScreenView: jest.Mock;
-let mockAnalyticsFn: jest.Mock;
+const mockLogEvent = jest.fn().mockResolvedValue(undefined);
+const mockLogScreenView = jest.fn().mockResolvedValue(undefined);
+const mockAnalyticsFn = jest.fn(() => ({
+  logEvent: mockLogEvent,
+  logScreenView: mockLogScreenView,
+}));
 
-jest.mock('@react-native-firebase/analytics', () => {
-  mockLogEvent = jest.fn().mockResolvedValue(undefined);
-  mockLogScreenView = jest.fn().mockResolvedValue(undefined);
-  mockAnalyticsFn = jest.fn(() => ({
-    logEvent: mockLogEvent,
-    logScreenView: mockLogScreenView,
-  }));
-  return mockAnalyticsFn;
-});
+jest.mock('@react-native-firebase/analytics', () => mockAnalyticsFn);
 
 import {
   trackTopicSelected,
@@ -38,14 +32,12 @@ import {
 const flush = () => new Promise((r) => setImmediate(r));
 
 beforeEach(() => {
-  jest.clearAllMocks();
-  // restore happy-path mock implementations
-  mockAnalyticsFn.mockImplementation(() => ({
+  mockLogEvent.mockReset().mockResolvedValue(undefined);
+  mockLogScreenView.mockReset().mockResolvedValue(undefined);
+  mockAnalyticsFn.mockReset().mockImplementation(() => ({
     logEvent: mockLogEvent,
     logScreenView: mockLogScreenView,
   }));
-  mockLogEvent.mockResolvedValue(undefined);
-  mockLogScreenView.mockResolvedValue(undefined);
 });
 
 /* ============================
@@ -79,7 +71,7 @@ describe('analytics() returns object with undefined methods', () => {
     mockAnalyticsFn.mockImplementation(() => ({
       logEvent: undefined,
       logScreenView: undefined,
-    }));
+    } as any));
   });
 
   it('trackTopicSelected does not throw', () => {
@@ -96,7 +88,7 @@ describe('analytics() returns object with undefined methods', () => {
    =================================== */
 describe('analytics() returns null', () => {
   beforeEach(() => {
-    mockAnalyticsFn.mockReturnValue(null);
+    mockAnalyticsFn.mockReturnValue(null as any);
   });
 
   it('trackTopicSelected does not throw', () => {

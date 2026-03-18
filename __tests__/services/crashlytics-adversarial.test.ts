@@ -6,31 +6,24 @@
  * the caller-supplied arguments are.
  */
 
-/* ---------- configurable mock ---------- */
-let mockRecordError: jest.Mock;
-let mockSetAttribute: jest.Mock;
-let mockCrashlyticsFn: jest.Mock;
+const mockRecordError = jest.fn();
+const mockSetAttribute = jest.fn().mockResolvedValue(undefined);
+const mockCrashlyticsFn = jest.fn(() => ({
+  recordError: mockRecordError,
+  setAttribute: mockSetAttribute,
+}));
 
-jest.mock('@react-native-firebase/crashlytics', () => {
-  mockRecordError = jest.fn();
-  mockSetAttribute = jest.fn().mockResolvedValue(undefined);
-  mockCrashlyticsFn = jest.fn(() => ({
-    recordError: mockRecordError,
-    setAttribute: mockSetAttribute,
-  }));
-  return mockCrashlyticsFn;
-});
+jest.mock('@react-native-firebase/crashlytics', () => mockCrashlyticsFn);
 
 import { logError } from '../../src/services/crashlytics';
 
 beforeEach(() => {
-  jest.clearAllMocks();
-  mockCrashlyticsFn.mockImplementation(() => ({
+  mockRecordError.mockReset();
+  mockSetAttribute.mockReset().mockResolvedValue(undefined);
+  mockCrashlyticsFn.mockReset().mockImplementation(() => ({
     recordError: mockRecordError,
     setAttribute: mockSetAttribute,
   }));
-  mockRecordError.mockReset();
-  mockSetAttribute.mockReset().mockResolvedValue(undefined);
 });
 
 /* ============================
@@ -111,7 +104,7 @@ describe('unexpected context values', () => {
    ============================ */
 describe('crashlytics() returns null', () => {
   beforeEach(() => {
-    mockCrashlyticsFn.mockReturnValue(null);
+    mockCrashlyticsFn.mockReturnValue(null as any);
   });
 
   it('logError does not throw', () => {
@@ -121,7 +114,7 @@ describe('crashlytics() returns null', () => {
 
 describe('crashlytics() returns undefined', () => {
   beforeEach(() => {
-    mockCrashlyticsFn.mockReturnValue(undefined);
+    mockCrashlyticsFn.mockReturnValue(undefined as any);
   });
 
   it('logError does not throw', () => {
@@ -174,7 +167,7 @@ describe('recordError is not a function', () => {
     mockCrashlyticsFn.mockImplementation(() => ({
       recordError: 'not-a-function',
       setAttribute: mockSetAttribute,
-    }));
+    } as any));
   });
 
   it('logError does not throw', () => {

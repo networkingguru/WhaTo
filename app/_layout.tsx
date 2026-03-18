@@ -6,7 +6,7 @@ import { StatusBar } from 'expo-status-bar';
 import * as Linking from 'expo-linking';
 import { colors } from '../src/theme';
 import { trackScreenView } from '../src/services/analytics';
-import crashlytics from '@react-native-firebase/crashlytics';
+import { logError } from '../src/services/crashlytics';
 
 // Class-based error boundary — required pattern for React 19
 // (no stable hook-based API for error boundaries exists in React 19)
@@ -21,11 +21,7 @@ class AppErrorBoundary extends React.Component<
   }
 
   componentDidCatch(error: Error) {
-    try {
-      crashlytics().recordError(error);
-    } catch {
-      // never let crash reporting crash the app
-    }
+    logError(error, 'AppErrorBoundary');
   }
 
   render() {
