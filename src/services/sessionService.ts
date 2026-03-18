@@ -1,5 +1,5 @@
 import { ref, set, get, onValue, update } from 'firebase/database';
-import { database } from './firebase';
+import { getDb } from './firebase';
 import { CardItem, Topic } from '../providers/types';
 
 const SESSION_TTL_MS = 24 * 60 * 60 * 1000;
@@ -91,7 +91,7 @@ export async function createSession(
   cards: CardItem[],
   location?: { latitude: number; longitude: number; radiusMiles: number }
 ): Promise<void> {
-  const sessionRef = ref(database, `sessions/${code}`);
+  const sessionRef = ref(getDb(), `sessions/${code}`);
   const sessionData: SessionData = {
     topic,
     status: 'waiting',
@@ -114,7 +114,7 @@ export async function joinSession(
   deviceId: string,
   displayName: string
 ): Promise<{ success: boolean; error?: string }> {
-  const sessionRef = ref(database, `sessions/${code}`);
+  const sessionRef = ref(getDb(), `sessions/${code}`);
   const snapshot = await get(sessionRef);
 
   if (!snapshot.exists()) {
@@ -140,7 +140,7 @@ export async function joinSession(
     return { success: false, error: 'Session is full (max 8 participants)' };
   }
 
-  await update(ref(database, `sessions/${code}/participants/${deviceId}`), {
+  await update(ref(getDb(), `sessions/${code}/participants/${deviceId}`), {
     name: displayName,
     joinedAt: Date.now(),
   });
@@ -149,11 +149,11 @@ export async function joinSession(
 }
 
 export async function startSession(code: string): Promise<void> {
-  await update(ref(database, `sessions/${code}`), { status: 'active' });
+  await update(ref(getDb(), `sessions/${code}`), { status: 'active' });
 }
 
 export async function endSession(code: string): Promise<void> {
-  await update(ref(database, `sessions/${code}`), { status: 'complete' });
+  await update(ref(getDb(), `sessions/${code}`), { status: 'complete' });
 }
 
 export async function recordSwipe(
@@ -163,7 +163,7 @@ export async function recordSwipe(
   liked: boolean
 ): Promise<void> {
   await update(
-    ref(database, `sessions/${code}/participants/${deviceId}/swipes`),
+    ref(getDb(), `sessions/${code}/participants/${deviceId}/swipes`),
     { [cardId]: liked }
   );
 }
@@ -172,7 +172,7 @@ export async function markCompleted(
   code: string,
   deviceId: string
 ): Promise<void> {
-  await update(ref(database, `sessions/${code}/participants/${deviceId}`), {
+  await update(ref(getDb(), `sessions/${code}/participants/${deviceId}`), {
     completed: true,
   });
 }
@@ -181,7 +181,7 @@ export function listenToSession(
   code: string,
   callback: (session: SessionData | null) => void
 ): () => void {
-  const sessionRef = ref(database, `sessions/${code}`);
+  const sessionRef = ref(getDb(), `sessions/${code}`);
   const unsubscribe = onValue(sessionRef, (snapshot) => {
     callback(snapshot.exists() ? (snapshot.val() as SessionData) : null);
   });
@@ -189,7 +189,7 @@ export function listenToSession(
 }
 
 export async function getSession(code: string): Promise<SessionData | null> {
-  const snapshot = await get(ref(database, `sessions/${code}`));
+  const snapshot = await get(ref(getDb(), `sessions/${code}`));
   return snapshot.exists() ? (snapshot.val() as SessionData) : null;
 }
 
@@ -247,7 +247,7 @@ export async function startNextRound(
   code: string,
   matchedCards: CardItem[]
 ): Promise<void> {
-  const sessionRef = ref(database, `sessions/${code}`);
+  const sessionRef = ref(getDb(), `sessions/${code}`);
   const snapshot = await get(sessionRef);
   if (!snapshot.exists()) return;
 
