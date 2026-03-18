@@ -17,7 +17,7 @@ export default function JoinScreen() {
 
   async function handleJoin() {
     if (!code.trim() || !name.trim()) {
-      Alert.alert('Missing info', 'Please enter the session code and your name.');
+      Alert.alert('Missing info', 'Please enter the group code and your name.');
       return;
     }
 
@@ -50,9 +50,9 @@ export default function JoinScreen() {
       </TouchableOpacity>
 
       <View style={styles.content}>
-        <Text style={styles.title}>Join Session</Text>
+        <Text style={styles.title}>Join Group</Text>
 
-        <Text style={styles.label}>Session Code</Text>
+        <Text style={styles.label}>Group Code</Text>
         <TextInput
           style={styles.input}
           value={code}

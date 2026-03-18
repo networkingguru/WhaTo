@@ -206,10 +206,10 @@ export default function GroupSwipeScreen() {
   const isCreator = session?.createdBy === deviceId;
 
   const handleEndSession = useCallback(() => {
-    Alert.alert('End Session?', 'This will end the session for everyone and show results.', [
+    Alert.alert('End Group?', 'This will end the group for everyone and show results.', [
       { text: 'Cancel', style: 'cancel' },
       {
-        text: 'End Session',
+        text: 'End Group',
         style: 'destructive',
         onPress: async () => {
           if (code) await endSession(code);
@@ -227,7 +227,7 @@ export default function GroupSwipeScreen() {
       <SafeAreaView style={styles.center}>
         <ActivityIndicator size="large" color={colors.primary} />
         <Text style={[typography.body, { marginTop: spacing.md }]}>
-          Loading session...
+          Loading group...
         </Text>
       </SafeAreaView>
     );

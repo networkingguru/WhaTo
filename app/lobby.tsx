@@ -45,7 +45,7 @@ export default function LobbyScreen() {
     }
     const topicLabel = topicDisplayNames[topic as Topic] ?? topic;
     await SMS.sendSMSAsync([], [
-      `WhaTo... ${topicLabel} Join my session: whato://join/${code}`,
+      `WhaTo... ${topicLabel} Join my group: whato://join/${code}`,
       `Don't have WhaTo? Get it on the App Store!`,
     ].join('\n'));
   }, [code, topic]);
@@ -73,7 +73,7 @@ export default function LobbyScreen() {
 
   return (
     <SafeAreaView style={styles.container}>
-      <Text style={styles.title}>Session: {code}</Text>
+      <Text style={styles.title}>Group: {code}</Text>
       <Text style={styles.subtitle}>
         WhaTo... {topicDisplayNames[topic as Topic] ?? topic}
       </Text>
@@ -110,7 +110,7 @@ export default function LobbyScreen() {
         )}
         <TouchableOpacity style={styles.cancelButton} onPress={handleCancel}>
           <Text style={styles.cancelText}>
-            {isCreator === 'true' ? 'Cancel Session' : 'Leave Session'}
+            {isCreator === 'true' ? 'Cancel Group' : 'Leave Group'}
           </Text>
         </TouchableOpacity>
       </View>

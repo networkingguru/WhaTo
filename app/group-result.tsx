@@ -79,7 +79,7 @@ export default function GroupResultScreen() {
             Someone ran out of options without finding any common ground.
           </Text>
           <Text style={styles.failedHint}>
-            Tip: Try enabling more cuisine types or genres in Options before starting a group session. More options = better chances of matching!
+            Tip: Try enabling more cuisine types or genres in Options before starting a group. More options = better chances of matching!
           </Text>
           <TouchableOpacity style={styles.failedHomeButton} onPress={() => router.replace('/')}>
             <Text style={styles.homeText}>Start Over</Text>
