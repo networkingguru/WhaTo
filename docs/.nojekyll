@@ -1,0 +1,15 @@
+touch docs/.nojekyll
+git add docs/.nojekyll
+git commit -m "Disable Jekyll processing"
+git push
+```
+
+**However** — this means your `.md` files (like `privacy-policy.md`) will no longer be rendered as HTML. You'd need to either convert them to `.html` or use a different approach.
+
+**Option B: Wrap the offending code in `raw` tags (keeps Jekyll working)**
+
+In `docs/superpowers/plans/2026-03-12-phase1-solo-swipe-mvp.md`, find any code blocks that contain `{{ }}` syntax and wrap them with Liquid raw tags:
+```
+{% raw %}
+{{ headerShown: false, contentStyle: { backgroundColor: colors.background } }}
+{% endraw %}
