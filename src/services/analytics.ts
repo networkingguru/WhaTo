@@ -4,7 +4,11 @@ type Topic = 'food' | 'movie' | 'show';
 type Mode = 'solo' | 'group';
 
 function safe(fn: () => Promise<void>): void {
-  fn().catch(() => {});
+  try {
+    fn().catch(() => {});
+  } catch {
+    // never let analytics crash the app
+  }
 }
 
 export function trackTopicSelected(topic: Topic, mode: Mode): void {
