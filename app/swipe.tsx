@@ -5,7 +5,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import * as Location from 'expo-location';
 import { SwipeDeck } from '../src/components/SwipeDeck';
 import { CardDetail } from '../src/components/CardDetail';
-import { SearchOptions, FoodFilters, MediaFilters } from '../src/components/SearchOptions';
+import { FoodFilters, MediaFilters } from '../src/components/SearchOptions';
 import { RadiusSelector } from '../src/components/RadiusSelector';
 import { useCards } from '../src/hooks/useCards';
 import { Topic, CardItem } from '../src/providers/types';
@@ -15,26 +15,34 @@ import { trackSoloSwipeRight, trackSoloDeckEmpty, trackCardDetailOpened } from '
 import { logError } from '../src/services/crashlytics';
 
 export default function SwipeScreen() {
-  const params = useLocalSearchParams<{ topic: string; pickedLatitude?: string; pickedLongitude?: string }>();
+  const params = useLocalSearchParams<{
+    topic: string;
+    pickedLatitude?: string;
+    pickedLongitude?: string;
+    openNow?: string;
+    categories?: string;
+    sortBy?: string;
+    genreIds?: string;
+    sortTmdb?: string;
+  }>();
   const topic = params.topic as Topic;
   const router = useRouter();
   const [radius, setRadius] = useState(5);
   const [detailCard, setDetailCard] = useState<CardItem | null>(null);
-  const [optionsVisible, setOptionsVisible] = useState(false);
   const [location, setLocation] = useState<{ latitude: number; longitude: number } | undefined>();
   const [locationLoading, setLocationLoading] = useState(topic === 'food');
   const [locationError, setLocationError] = useState<string | null>(null);
 
-  // Filter state
-  const [foodFilters, setFoodFilters] = useState<FoodFilters>({
-    openNow: true,
-    categories: [],
-    sortBy: 'best_match',
-  });
-  const [mediaFilters, setMediaFilters] = useState<MediaFilters>({
-    genreIds: [],
-    sortTmdb: 'popularity',
-  });
+  // Filter state — initialize from route params if provided
+  const [foodFilters, setFoodFilters] = useState<FoodFilters>(() => ({
+    openNow: params.openNow !== undefined ? params.openNow === 'true' : true,
+    categories: params.categories ? JSON.parse(params.categories) : [],
+    sortBy: (params.sortBy as FoodFilters['sortBy']) ?? 'best_match',
+  }));
+  const [mediaFilters, setMediaFilters] = useState<MediaFilters>(() => ({
+    genreIds: params.genreIds ? JSON.parse(params.genreIds) : [],
+    sortTmdb: (params.sortTmdb as MediaFilters['sortTmdb']) ?? 'popularity',
+  }));
 
   // Use picked location from location-picker if available
   React.useEffect(() => {
@@ -157,9 +165,7 @@ export default function SwipeScreen() {
           <Text style={styles.backButton}>←</Text>
         </Pressable>
         <Text style={styles.header}>{topicDisplayNames[topic as Topic] ?? 'Swipe'}</Text>
-        <Pressable onPress={() => setOptionsVisible(true)} hitSlop={12}>
-          <Text style={styles.optionsButton}>Options</Text>
-        </Pressable>
+        <View style={{ width: 48 }} />
       </View>
       {topic === 'food' && (
         <>
@@ -187,15 +193,6 @@ export default function SwipeScreen() {
           topic={topic}
         />
       )}
-      <SearchOptions
-        topic={topic}
-        visible={optionsVisible}
-        onClose={() => setOptionsVisible(false)}
-        foodFilters={foodFilters}
-        mediaFilters={mediaFilters}
-        onApplyFood={setFoodFilters}
-        onApplyMedia={setMediaFilters}
-      />
       <View style={styles.hints}>
         <Text style={typography.caption}>← Nope</Text>
         <Text style={typography.caption}>Yes! →</Text>
@@ -235,11 +232,6 @@ const styles = StyleSheet.create({
     ...typography.subtitle,
     color: colors.primary,
     fontSize: 24,
-  },
-  optionsButton: {
-    ...typography.caption,
-    color: colors.primary,
-    fontWeight: '600',
   },
   hints: {
     flexDirection: 'row',
