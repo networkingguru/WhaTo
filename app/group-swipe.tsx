@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useState, useRef } from 'react';
-import { View, Text, StyleSheet, ActivityIndicator, TouchableOpacity, Alert } from 'react-native';
+import { View, Text, StyleSheet, ActivityIndicator, TouchableOpacity, Alert, AppState } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { SwipeDeck } from '../src/components/SwipeDeck';
@@ -13,9 +13,13 @@ import {
   computeLiveMatches,
   hasHopelessParticipant,
   startNextRound,
+  setPresence,
+  markCompleted,
   SessionData,
 } from '../src/services/sessionService';
 import { getDeviceId } from '../src/services/deviceId';
+import { ParticipantBar } from '../src/components/ParticipantBar';
+import { LegendToast } from '../src/components/LegendToast';
 
 const GRACE_PERIOD_MS = 30_000;
 
@@ -34,6 +38,38 @@ export default function GroupSwipeScreen() {
   useEffect(() => {
     getDeviceId().then(setDeviceId);
   }, []);
+
+  // Presence lifecycle
+  const presenceCleanupRef = useRef<(() => void) | null>(null);
+  const isConnectedRef = useRef(false);
+
+  useEffect(() => {
+    if (!code || !deviceId) return;
+
+    const connectPresence = async () => {
+      if (isConnectedRef.current) return;
+      isConnectedRef.current = true;
+      presenceCleanupRef.current = await setPresence(code, deviceId);
+    };
+
+    connectPresence();
+
+    const subscription = AppState.addEventListener('change', (state) => {
+      if (state === 'active') {
+        isConnectedRef.current = false;
+        connectPresence();
+      }
+    });
+
+    return () => {
+      subscription.remove();
+      if (presenceCleanupRef.current) {
+        presenceCleanupRef.current();
+        presenceCleanupRef.current = null;
+      }
+      isConnectedRef.current = false;
+    };
+  }, [code, deviceId]);
 
   // Listen for session updates
   useEffect(() => {
@@ -142,6 +178,9 @@ export default function GroupSwipeScreen() {
   );
 
   const handleEmpty = useCallback(() => {
+    if (code && deviceId) {
+      markCompleted(code, deviceId);
+    }
     // Participant exhausted all cards. Match detection in the listener
     // will handle hopeless participant check.
     // If match banner is already showing, resolve immediately.
@@ -188,6 +227,7 @@ export default function GroupSwipeScreen() {
 
   return (
     <SafeAreaView style={styles.container}>
+      <LegendToast dismissed={matchBanner} />
       <View style={styles.headerRow}>
         <TouchableOpacity onPress={isCreator ? handleEndSession : handleLeave} hitSlop={12}>
           <Text style={styles.exitText}>{isCreator ? 'End' : 'Leave'}</Text>
@@ -216,6 +256,12 @@ export default function GroupSwipeScreen() {
         onSwipeLeft={handleSwipeLeft}
         onEmpty={handleEmpty}
       />
+      {session && deviceId && (
+        <ParticipantBar
+          participants={session.participants}
+          selfDeviceId={deviceId}
+        />
+      )}
       <View style={styles.hints}>
         <Text style={typography.caption}>← Nope</Text>
         <Text style={typography.caption}>Yes! →</Text>
