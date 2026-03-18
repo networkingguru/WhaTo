@@ -1,15 +1,23 @@
 import { NativeModules } from 'react-native';
+import { Topic } from '../providers/types';
 
-type Topic = 'food' | 'movie' | 'show';
 type Mode = 'solo' | 'group';
 
 const hasFirebase = !!NativeModules.RNFBAppModule;
+let _mod: any = undefined; // cached require() result
 
 function getAnalytics() {
   if (!hasFirebase) return null;
+  if (_mod === undefined) {
+    try {
+      _mod = require('@react-native-firebase/analytics');
+    } catch {
+      _mod = null;
+    }
+  }
+  if (!_mod) return null;
   try {
-    const mod = require('@react-native-firebase/analytics');
-    return (mod.default ?? mod)();
+    return (_mod.default ?? _mod)();
   } catch {
     return null;
   }

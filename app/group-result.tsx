@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, Image, TouchableOpacity } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -38,25 +38,28 @@ export default function GroupResultScreen() {
     }
   }, [code]);
 
-  useEffect(() => {
-    if (!session) return;
-    if (isFailed) {
-      trackGroupNoMatch(session.topic);
-      return;
-    }
+  const { unanimousCards, majorityCards, hasMatches } = useMemo(() => {
+    if (!session || isFailed) return { unanimousCards: [], majorityCards: [], hasMatches: false };
     const matches = computeMatches(
       session.participants as Record<string, { name: string; swipes: Record<string, boolean> }>
     );
     const cardMap = new Map(session.cards.map((c) => [c.id, c]));
-    const hasMatches =
-      matches.unanimous.some((id) => cardMap.has(id)) ||
-      matches.majority.some((id) => cardMap.has(id));
-    if (hasMatches) {
-      trackGroupMatchFound(session.topic);
-    } else {
-      trackGroupNoMatch(session.topic);
-    }
+    const unanimous = matches.unanimous.map((id) => cardMap.get(id)).filter(Boolean) as CardItem[];
+    const majority = matches.majority.map((id) => cardMap.get(id)).filter(Boolean) as CardItem[];
+    return { unanimousCards: unanimous, majorityCards: majority, hasMatches: unanimous.length > 0 || majority.length > 0 };
   }, [session, isFailed]);
+
+  // Fire analytics once when session loads
+  const trackedRef = useRef(false);
+  useEffect(() => {
+    if (!session || trackedRef.current) return;
+    trackedRef.current = true;
+    if (isFailed || !hasMatches) {
+      trackGroupNoMatch(session.topic);
+    } else {
+      trackGroupMatchFound(session.topic);
+    }
+  }, [session, isFailed, hasMatches]);
 
   if (!session) {
     return (
@@ -85,19 +88,6 @@ export default function GroupResultScreen() {
       </SafeAreaView>
     );
   }
-
-  const matches = computeMatches(
-    session.participants as Record<string, { name: string; swipes: Record<string, boolean> }>
-  );
-
-  const cardMap = new Map<string, CardItem>();
-  for (const card of session.cards) {
-    cardMap.set(card.id, card);
-  }
-
-  const unanimousCards = matches.unanimous.map((id) => cardMap.get(id)).filter(Boolean) as CardItem[];
-  const majorityCards = matches.majority.map((id) => cardMap.get(id)).filter(Boolean) as CardItem[];
-  const hasMatches = unanimousCards.length > 0 || majorityCards.length > 0;
 
   return (
     <SafeAreaView style={styles.container}>

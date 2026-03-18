@@ -164,30 +164,27 @@ export default function GroupSwipeScreen() {
     }
   }
 
-  const handleSwipeRight = useCallback(
-    async (card: CardItem) => {
+  const handleSwipe = useCallback(
+    async (card: CardItem, liked: boolean) => {
       if (code && deviceId) {
         try {
-          await recordSwipe(code, deviceId, card.id, true);
+          await recordSwipe(code, deviceId, card.id, liked);
         } catch (err) {
-          logError(err, 'group_swipe_right');
+          logError(err, liked ? 'group_swipe_right' : 'group_swipe_left');
         }
       }
     },
     [code, deviceId]
   );
 
+  const handleSwipeRight = useCallback(
+    (card: CardItem) => handleSwipe(card, true),
+    [handleSwipe]
+  );
+
   const handleSwipeLeft = useCallback(
-    async (card: CardItem) => {
-      if (code && deviceId) {
-        try {
-          await recordSwipe(code, deviceId, card.id, false);
-        } catch (err) {
-          logError(err, 'group_swipe_left');
-        }
-      }
-    },
-    [code, deviceId]
+    (card: CardItem) => handleSwipe(card, false),
+    [handleSwipe]
   );
 
   const handleEmpty = useCallback(() => {
