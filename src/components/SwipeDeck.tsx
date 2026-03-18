@@ -114,6 +114,14 @@ export function SwipeDeck({ cards, onSwipeRight, onSwipeLeft, onEmpty, onTap }: 
     opacity: interpolate(translateX.value, [0, SWIPE_THRESHOLD], [0, 1], Extrapolation.CLAMP),
   }));
 
+  const cardTintLeftStyle = useAnimatedStyle(() => ({
+    opacity: interpolate(translateX.value, [-SWIPE_THRESHOLD, 0], [0.3, 0], Extrapolation.CLAMP),
+  }));
+
+  const cardTintRightStyle = useAnimatedStyle(() => ({
+    opacity: interpolate(translateX.value, [0, SWIPE_THRESHOLD], [0, 0.3], Extrapolation.CLAMP),
+  }));
+
   if (!currentCard) {
     return (
       <View style={styles.empty}>
@@ -139,6 +147,8 @@ export function SwipeDeck({ cards, onSwipeRight, onSwipeLeft, onEmpty, onTap }: 
       <GestureDetector gesture={gesture}>
         <Animated.View style={[styles.cardContainer, { zIndex: 1 }, animatedStyle]}>
           <SwipeCard card={currentCard} />
+          <Animated.View style={[styles.cardTint, styles.cardTintRed, cardTintLeftStyle]} pointerEvents="none" />
+          <Animated.View style={[styles.cardTint, styles.cardTintGreen, cardTintRightStyle]} pointerEvents="none" />
           <Animated.View style={[styles.overlay, styles.overlayLeft, overlayLeftStyle]}>
             <Text style={styles.overlayLeftText}>NOPE</Text>
           </Animated.View>
@@ -172,27 +182,39 @@ const styles = StyleSheet.create({
   overlay: {
     position: 'absolute',
     top: spacing.lg,
-    paddingHorizontal: spacing.md,
+    paddingHorizontal: spacing.lg,
     paddingVertical: spacing.sm,
     borderRadius: 8,
-    borderWidth: 3,
+    borderWidth: 4,
   },
   overlayLeft: {
     right: spacing.lg,
     borderColor: '#FF4444',
+    backgroundColor: 'rgba(255, 68, 68, 0.15)',
   },
   overlayRight: {
     left: spacing.lg,
     borderColor: colors.success,
+    backgroundColor: 'rgba(76, 175, 80, 0.15)',
   },
   overlayLeftText: {
-    fontSize: 24,
-    fontWeight: '800',
+    fontSize: 32,
+    fontWeight: '900',
     color: '#FF4444',
   },
   overlayRightText: {
-    fontSize: 24,
-    fontWeight: '800',
-    color: '#4CAF50',  // colors.success
+    fontSize: 32,
+    fontWeight: '900',
+    color: '#4CAF50',
+  },
+  cardTint: {
+    ...StyleSheet.absoluteFillObject,
+    borderRadius: 16,
+  },
+  cardTintRed: {
+    backgroundColor: '#FF4444',
+  },
+  cardTintGreen: {
+    backgroundColor: '#4CAF50',
   },
 });

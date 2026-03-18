@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, TextInput, Alert, ActivityIndicator, TouchableOpacity } from 'react-native';
+import { View, Text, StyleSheet, TextInput, Alert, ActivityIndicator, TouchableOpacity, Keyboard, TouchableWithoutFeedback } from 'react-native';
 import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import * as Device from 'expo-device';
@@ -232,8 +232,8 @@ export default function HomeScreen() {
               <Text style={styles.decideSoloText}>Decide Solo</Text>
               <Text style={styles.decideSoloSubtext}>Swipe on your own</Text>
             </TouchableOpacity>
-            <TouchableOpacity onPress={() => setOptionsVisible(true)}>
-              <Text style={styles.optionsLink}>Options</Text>
+            <TouchableOpacity style={styles.optionsButton} onPress={() => setOptionsVisible(true)}>
+              <Text style={styles.optionsButtonText}>Options</Text>
             </TouchableOpacity>
             <TouchableOpacity onPress={resetToHome} style={styles.backLink}>
               <Text style={styles.backLinkText}>← Back</Text>
@@ -243,24 +243,26 @@ export default function HomeScreen() {
 
         {/* Phase: Enter Name */}
         {phase === 'enter-name' && (
-          <View style={styles.groupForm}>
-            <Text style={[styles.groupTitle, styles.groupTitleWhite]}>Your display name</Text>
-            <TextInput
-              style={styles.nameInput}
-              value={displayName}
-              onChangeText={setDisplayName}
-              placeholder="Enter your name"
-              placeholderTextColor={colors.textSecondary}
-              maxLength={20}
-              autoCorrect={false}
-            />
-            <TouchableOpacity style={styles.createButton} onPress={handleCreateGroup}>
-              <Text style={styles.createButtonText}>Create Group</Text>
-            </TouchableOpacity>
-            <TouchableOpacity onPress={() => setPhase('choose-mode')} style={styles.backLink}>
-              <Text style={styles.backLinkTextWhite}>← Back</Text>
-            </TouchableOpacity>
-          </View>
+          <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
+            <View style={styles.groupForm}>
+              <Text style={[styles.groupTitle, styles.groupTitleWhite]}>Your display name</Text>
+              <TextInput
+                style={styles.nameInput}
+                value={displayName}
+                onChangeText={setDisplayName}
+                placeholder="Enter your name"
+                placeholderTextColor={colors.textSecondary}
+                maxLength={20}
+                autoCorrect={false}
+              />
+              <TouchableOpacity style={styles.createButton} onPress={handleCreateGroup}>
+                <Text style={styles.createButtonText}>Create Group</Text>
+              </TouchableOpacity>
+              <TouchableOpacity onPress={() => setPhase('choose-mode')} style={styles.backLink}>
+                <Text style={styles.backLinkTextWhite}>← Back</Text>
+              </TouchableOpacity>
+            </View>
+          </TouchableWithoutFeedback>
         )}
 
         {/* Phase: Creating */}
@@ -378,11 +380,21 @@ const styles = StyleSheet.create({
     color: colors.textSecondary,
     marginTop: 2,
   },
-  optionsLink: {
-    ...typography.caption,
-    color: colors.tertiary,
-    textDecorationLine: 'underline' as const,
+  optionsButton: {
+    backgroundColor: 'transparent',
+    paddingVertical: spacing.md,
+    paddingHorizontal: spacing.xl,
+    borderRadius: 16,
+    width: '100%',
+    alignItems: 'center',
+    borderWidth: 2,
+    borderColor: colors.textSecondary,
     marginTop: spacing.sm,
+  },
+  optionsButtonText: {
+    ...typography.body,
+    color: colors.textSecondary,
+    fontWeight: '600',
   },
   groupForm: {
     width: '100%',

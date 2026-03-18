@@ -3,6 +3,7 @@ import { View, Text, StyleSheet, ActivityIndicator, TouchableOpacity, Alert, App
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { SwipeDeck } from '../src/components/SwipeDeck';
+import { CardDetail } from '../src/components/CardDetail';
 import { CardItem } from '../src/providers/types';
 import { colors, spacing, typography } from '../src/theme';
 import { topicDisplayNames } from '../src/utils/topicLabels';
@@ -32,6 +33,7 @@ export default function GroupSwipeScreen() {
   const [cards, setCards] = useState<CardItem[]>([]);
   const [round, setRound] = useState(1);
   const [matchBanner, setMatchBanner] = useState(false);
+  const [detailCard, setDetailCard] = useState<CardItem | null>(null);
   const graceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const matchHandledRef = useRef(false);
   const cardsLoadedRef = useRef(false);
@@ -265,7 +267,16 @@ export default function GroupSwipeScreen() {
         onSwipeRight={handleSwipeRight}
         onSwipeLeft={handleSwipeLeft}
         onEmpty={handleEmpty}
+        onTap={(card) => setDetailCard(card)}
       />
+      {detailCard && (
+        <CardDetail
+          card={detailCard}
+          visible={true}
+          onClose={() => setDetailCard(null)}
+          topic={session.topic}
+        />
+      )}
       {session && deviceId && (
         <ParticipantBar
           participants={session.participants}
@@ -273,8 +284,8 @@ export default function GroupSwipeScreen() {
         />
       )}
       <View style={styles.hints}>
-        <Text style={typography.caption}>← Nope</Text>
-        <Text style={typography.caption}>Yes! →</Text>
+        <Text style={styles.hintLeft}>← Nope</Text>
+        <Text style={styles.hintRight}>Yes! →</Text>
       </View>
       <Text style={styles.attribution}>
         {session.topic === 'food'
@@ -342,6 +353,16 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingHorizontal: spacing.xl,
     paddingBottom: spacing.lg,
+  },
+  hintLeft: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#FF4444',
+  },
+  hintRight: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#4CAF50',
   },
   attribution: {
     fontSize: 10,

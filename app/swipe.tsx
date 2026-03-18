@@ -202,8 +202,8 @@ export default function SwipeScreen() {
         />
       )}
       <View style={styles.hints}>
-        <Text style={typography.caption}>← Nope</Text>
-        <Text style={typography.caption}>Yes! →</Text>
+        <Text style={styles.hintLeft}>← Nope</Text>
+        <Text style={styles.hintRight}>Yes! →</Text>
       </View>
       <Text style={styles.attribution}>
         {topic === 'food'
@@ -257,6 +257,16 @@ const styles = StyleSheet.create({
     ...typography.caption,
     color: colors.primary,
     textDecorationLine: 'underline' as const,
+  },
+  hintLeft: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#FF4444',
+  },
+  hintRight: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#4CAF50',
   },
   attribution: {
     fontSize: 10,
