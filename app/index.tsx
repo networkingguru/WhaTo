@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, TextInput, Alert, ActivityIndicator, TouchableOpacity, ScrollView } from 'react-native';
+import { View, Text, StyleSheet, TextInput, Alert, ActivityIndicator, TouchableOpacity } from 'react-native';
 import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import * as Device from 'expo-device';
@@ -28,9 +28,8 @@ const DISPLAY_NAME_KEY = 'whato_display_name';
 export default function HomeScreen() {
   const router = useRouter();
   const [supportVisible, setSupportVisible] = useState(false);
-  const [mode, setMode] = useState<'solo' | 'group'>('solo');
-  const [groupPhase, setGroupPhase] = useState<'pick' | 'enter-name' | 'creating'>('pick');
-  const [groupTopic, setGroupTopic] = useState<Topic | null>(null);
+  const [phase, setPhase] = useState<'home' | 'choose-mode' | 'enter-name' | 'creating'>('home');
+  const [selectedTopic, setSelectedTopic] = useState<Topic | null>(null);
   const [displayName, setDisplayName] = useState('');
   const [optionsVisible, setOptionsVisible] = useState(false);
   const [feedbackVisible, setFeedbackVisible] = useState(false);
@@ -43,8 +42,6 @@ export default function HomeScreen() {
     genreIds: [],
     sortTmdb: 'popularity',
   });
-
-  const isGroupMode = mode === 'group';
 
   // Load saved name, or fall back to extracting from device name
   useEffect(() => {
@@ -76,36 +73,47 @@ export default function HomeScreen() {
   }, []);
 
   function handleTopicPress(topic: Topic) {
-    trackTopicSelected(topic, isGroupMode ? 'group' : 'solo');
-    if (isGroupMode) {
-      setGroupTopic(topic);
-      setGroupPhase('enter-name');
-    } else {
-      router.push({ pathname: '/swipe', params: { topic } });
-    }
+    setSelectedTopic(topic);
+    setPhase('choose-mode');
   }
 
-  function resetToSolo() {
-    setMode('solo');
-    setGroupPhase('pick');
-    setGroupTopic(null);
-    // Keep displayName so it persists across group mode toggling
+  function resetToHome() {
+    setPhase('home');
+    setSelectedTopic(null);
+  }
+
+  function handleDecideSolo() {
+    if (!selectedTopic) return;
+    trackTopicSelected(selectedTopic, 'solo');
+
+    const filterParams: Record<string, string> = { topic: selectedTopic };
+    if (selectedTopic === 'food') {
+      filterParams.openNow = String(foodFilters.openNow);
+      if (foodFilters.categories.length > 0) filterParams.categories = JSON.stringify(foodFilters.categories);
+      filterParams.sortBy = foodFilters.sortBy;
+    } else {
+      if (mediaFilters.genreIds.length > 0) filterParams.genreIds = JSON.stringify(mediaFilters.genreIds);
+      filterParams.sortTmdb = mediaFilters.sortTmdb;
+    }
+
+    resetToHome();
+    router.push({ pathname: '/swipe', params: filterParams });
   }
 
   const providers = { movie: movieProvider, show: showProvider, food: restaurantProvider };
 
   async function handleCreateGroup() {
-    if (!groupTopic || !displayName.trim()) {
+    if (!selectedTopic || !displayName.trim()) {
       Alert.alert('Missing info', 'Please enter your name.');
       return;
     }
-    setGroupPhase('creating');
+    setPhase('creating');
     try {
       const code = generateSessionCode();
       const deviceId = await getDeviceId();
 
       let fetchOptions: Record<string, any> = {};
-      if (groupTopic === 'food') {
+      if (selectedTopic === 'food') {
         const { status } = await Location.requestForegroundPermissionsAsync();
         if (status === 'granted') {
           const loc = await Location.getCurrentPositionAsync({});
@@ -119,41 +127,44 @@ export default function HomeScreen() {
         fetchOptions.sortTmdb = mediaFilters.sortTmdb;
       }
 
-      const cards = await providers[groupTopic].fetchCards(fetchOptions);
+      const cards = await providers[selectedTopic].fetchCards(fetchOptions);
       if (cards.length === 0) {
         Alert.alert('No results', 'Could not find any options. Try again later.');
-        setGroupPhase('enter-name');
+        setPhase('enter-name');
         return;
       }
 
-      const location = groupTopic === 'food' && fetchOptions.latitude
+      const location = selectedTopic === 'food' && fetchOptions.latitude
         ? { latitude: fetchOptions.latitude, longitude: fetchOptions.longitude!, radiusMiles: 5 }
         : undefined;
 
       const trimmedName = displayName.trim();
       await AsyncStorage.setItem(DISPLAY_NAME_KEY, trimmedName);
-      await createSession(code, groupTopic, deviceId, trimmedName, cards, location);
-      trackGroupSessionCreated(groupTopic);
-      resetToSolo();
-      router.push({ pathname: '/lobby', params: { code, topic: groupTopic, isCreator: 'true' } });
+      await createSession(code, selectedTopic, deviceId, trimmedName, cards, location);
+      trackTopicSelected(selectedTopic, 'group');
+      trackGroupSessionCreated(selectedTopic);
+      resetToHome();
+      router.push({ pathname: '/lobby', params: { code, topic: selectedTopic, isCreator: 'true' } });
     } catch (err) {
       logError(err, 'handleCreateGroup');
-      Alert.alert('Error', `Could not create session: ${err instanceof Error ? err.message : 'Unknown error'}`);
-      setGroupPhase('enter-name');
+      Alert.alert('Error', `Could not create group: ${err instanceof Error ? err.message : 'Unknown error'}`);
+      setPhase('enter-name');
     }
   }
 
+  const isEnterNameOrCreating = phase === 'enter-name' || phase === 'creating';
+
   return (
-    <SafeAreaView style={[styles.container, isGroupMode && styles.containerGroupMode]}>
+    <SafeAreaView style={[styles.container, isEnterNameOrCreating && styles.containerGroupMode]}>
       <View style={styles.sparkleContainer}>
         <SparkleButton onPress={() => setSupportVisible(true)} />
       </View>
       <SupportPanel visible={supportVisible} onClose={() => setSupportVisible(false)} />
       <FeedbackModal visible={feedbackVisible} onClose={() => setFeedbackVisible(false)} />
-      {groupTopic && (
+      {selectedTopic && (
         <SearchOptions
           visible={optionsVisible}
-          topic={groupTopic}
+          topic={selectedTopic}
           foodFilters={foodFilters}
           mediaFilters={mediaFilters}
           onApplyFood={setFoodFilters}
@@ -164,21 +175,11 @@ export default function HomeScreen() {
 
       <View style={styles.header}>
         <Logo />
-        <Text style={[styles.tagline, isGroupMode && styles.taglineGroup]}>
-          {isGroupMode ? 'Group Mode — pick a topic' : 'What do you feel like?'}
-        </Text>
       </View>
 
-      {/* Back button only visible in group enter-name sub-phase */}
-      {isGroupMode && groupPhase === 'enter-name' && (
-        <TouchableOpacity style={styles.backRow} onPress={() => setGroupPhase('pick')}>
-          <Text style={styles.backText}>← Back to topics</Text>
-        </TouchableOpacity>
-      )}
-
       <View style={styles.buttons}>
-        {/* Show topic buttons in both modes — but enter-name/creating replaces them in group */}
-        {(mode === 'solo' || (isGroupMode && groupPhase === 'pick')) && (
+        {/* Phase: Home — topic buttons + Join Group */}
+        {phase === 'home' && (
           <>
             <TopicButton
               label={topicDisplayNames.food}
@@ -198,10 +199,45 @@ export default function HomeScreen() {
               icon="Television"
               onPress={() => handleTopicPress('show')}
             />
+            <View style={styles.joinContainer}>
+              <TouchableOpacity style={styles.joinButton} onPress={() => router.push('/join')}>
+                <Text style={styles.joinButtonText}>Join Group</Text>
+              </TouchableOpacity>
+            </View>
           </>
         )}
 
-        {isGroupMode && groupPhase === 'enter-name' && (
+        {/* Phase: Choose Mode */}
+        {phase === 'choose-mode' && selectedTopic && (
+          <View style={styles.modeChoice}>
+            <Text style={styles.modeTopicTitle}>
+              {topicDisplayNames[selectedTopic]}
+            </Text>
+            <TouchableOpacity
+              style={styles.decideTogether}
+              onPress={() => setPhase('enter-name')}
+            >
+              <Text style={styles.decideTogetherText}>Decide Together</Text>
+              <Text style={styles.decideSubtext}>Create a group</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.decideSolo}
+              onPress={handleDecideSolo}
+            >
+              <Text style={styles.decideSoloText}>Decide Solo</Text>
+              <Text style={styles.decideSoloSubtext}>Swipe on your own</Text>
+            </TouchableOpacity>
+            <TouchableOpacity onPress={() => setOptionsVisible(true)}>
+              <Text style={styles.optionsLink}>Options</Text>
+            </TouchableOpacity>
+            <TouchableOpacity onPress={resetToHome} style={styles.backLink}>
+              <Text style={styles.backLinkText}>← Back</Text>
+            </TouchableOpacity>
+          </View>
+        )}
+
+        {/* Phase: Enter Name */}
+        {phase === 'enter-name' && (
           <View style={styles.groupForm}>
             <Text style={[styles.groupTitle, styles.groupTitleWhite]}>Your display name</Text>
             <TextInput
@@ -213,45 +249,26 @@ export default function HomeScreen() {
               maxLength={20}
               autoCorrect={false}
             />
-            <TouchableOpacity style={styles.optionsButton} onPress={() => setOptionsVisible(true)}>
-              <Text style={styles.optionsButtonText}>Options</Text>
-            </TouchableOpacity>
             <TouchableOpacity style={styles.createButton} onPress={handleCreateGroup}>
-              <Text style={styles.createButtonText}>Create Session</Text>
+              <Text style={styles.createButtonText}>Create Group</Text>
             </TouchableOpacity>
-            <TouchableOpacity onPress={() => setGroupPhase('pick')} style={styles.backLink}>
-              <Text style={styles.backLinkText}>← Back to topics</Text>
+            <TouchableOpacity onPress={() => setPhase('choose-mode')} style={styles.backLink}>
+              <Text style={styles.backLinkTextWhite}>← Back</Text>
             </TouchableOpacity>
           </View>
         )}
 
-        {isGroupMode && groupPhase === 'creating' && (
+        {/* Phase: Creating */}
+        {phase === 'creating' && (
           <View style={styles.groupForm}>
             <ActivityIndicator size="large" color={colors.primary} />
-            <Text style={[typography.body, { marginTop: spacing.md, color: '#FFFFFF' }]}>Creating session...</Text>
-          </View>
-        )}
-
-        {/* Mode buttons below topics */}
-        {(mode === 'solo' || (isGroupMode && groupPhase === 'pick')) && (
-          <View style={styles.modeButtons}>
-            {mode === 'solo' ? (
-              <>
-                <TouchableOpacity style={styles.groupButton} onPress={() => setMode('group')}>
-                  <Text style={styles.groupButtonText}>Group Mode</Text>
-                </TouchableOpacity>
-                <TouchableOpacity style={styles.joinButton} onPress={() => router.push('/join')}>
-                  <Text style={styles.joinButtonText}>Join Session</Text>
-                </TouchableOpacity>
-              </>
-            ) : (
-              <TouchableOpacity style={styles.goBackButton} onPress={resetToSolo}>
-                <Text style={styles.goBackButtonText}>Go Back</Text>
-              </TouchableOpacity>
-            )}
+            <Text style={[typography.body, { marginTop: spacing.md, color: '#FFFFFF' }]}>
+              Creating group...
+            </Text>
           </View>
         )}
       </View>
+
       <View style={styles.feedbackContainer}>
         <FeedbackButton onPress={() => setFeedbackVisible(true)} />
       </View>
@@ -283,46 +300,15 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
-  tagline: {
-    ...typography.body,
-    marginTop: spacing.sm,
-    color: colors.textSecondary,
-  },
-  taglineGroup: {
-    color: '#FFFFFF',
-  },
-  backRow: {
-    paddingVertical: spacing.sm,
-    alignSelf: 'flex-start',
-  },
-  backText: {
-    ...typography.body,
-    color: '#FFFFFF',
-    fontWeight: '600',
-  },
   buttons: {
     flex: 2,
     justifyContent: 'center',
     alignItems: 'center',
   },
-  modeButtons: {
+  joinContainer: {
     marginTop: spacing.xl,
-    gap: spacing.md,
     width: '100%',
     alignItems: 'center',
-  },
-  groupButton: {
-    backgroundColor: colors.tertiary,
-    paddingVertical: spacing.md,
-    paddingHorizontal: spacing.xl,
-    borderRadius: 16,
-    width: '100%',
-    alignItems: 'center',
-  },
-  groupButtonText: {
-    ...typography.body,
-    color: '#FFFFFF',
-    fontWeight: '700',
   },
   joinButton: {
     backgroundColor: colors.surface,
@@ -331,26 +317,67 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     width: '100%',
     alignItems: 'center',
-    borderWidth: 1,
+    borderWidth: 2,
     borderColor: colors.tertiary,
   },
   joinButtonText: {
     ...typography.body,
     color: colors.tertiary,
-    fontWeight: '600',
+    fontWeight: '700',
   },
-  goBackButton: {
-    backgroundColor: colors.surface,
+  modeChoice: {
+    width: '100%',
+    gap: spacing.md,
+    alignItems: 'center',
+  },
+  modeTopicTitle: {
+    ...typography.title,
+    textAlign: 'center',
+    marginBottom: spacing.md,
+  },
+  decideTogether: {
+    backgroundColor: colors.tertiary,
     paddingVertical: spacing.md,
     paddingHorizontal: spacing.xl,
     borderRadius: 16,
     width: '100%',
     alignItems: 'center',
   },
-  goBackButtonText: {
+  decideTogetherText: {
+    ...typography.body,
+    color: '#FFFFFF',
+    fontWeight: '700',
+  },
+  decideSubtext: {
+    ...typography.caption,
+    color: 'rgba(255,255,255,0.8)',
+    marginTop: 2,
+  },
+  decideSolo: {
+    backgroundColor: colors.surface,
+    paddingVertical: spacing.md,
+    paddingHorizontal: spacing.xl,
+    borderRadius: 16,
+    width: '100%',
+    alignItems: 'center',
+    borderWidth: 2,
+    borderColor: colors.tertiary,
+  },
+  decideSoloText: {
     ...typography.body,
     color: colors.tertiary,
-    fontWeight: '700',
+    fontWeight: '600',
+  },
+  decideSoloSubtext: {
+    ...typography.caption,
+    color: colors.textSecondary,
+    marginTop: 2,
+  },
+  optionsLink: {
+    ...typography.caption,
+    color: colors.tertiary,
+    textDecorationLine: 'underline' as const,
+    marginTop: spacing.sm,
   },
   groupForm: {
     width: '100%',
@@ -374,21 +401,6 @@ const styles = StyleSheet.create({
     borderColor: colors.textSecondary,
     width: '100%',
   },
-  optionsButton: {
-    backgroundColor: 'transparent',
-    paddingVertical: spacing.sm,
-    paddingHorizontal: spacing.xl,
-    borderRadius: 16,
-    width: '100%',
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: '#FFFFFF',
-  },
-  optionsButtonText: {
-    ...typography.body,
-    color: '#FFFFFF',
-    fontWeight: '600',
-  },
   createButton: {
     backgroundColor: colors.primary,
     paddingVertical: spacing.md,
@@ -406,6 +418,10 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.sm,
   },
   backLinkText: {
+    ...typography.caption,
+    color: colors.textSecondary,
+  },
+  backLinkTextWhite: {
     ...typography.caption,
     color: '#FFFFFF',
   },
