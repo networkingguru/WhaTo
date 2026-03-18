@@ -43,3 +43,5 @@ yarn-error.*
 
 # superpowers
 .superpowers/
+.worktrees/
+.superpowers/
