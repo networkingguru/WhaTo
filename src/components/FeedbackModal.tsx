@@ -13,6 +13,7 @@ interface FeedbackModalProps {
 export function FeedbackModal({ visible, onClose }: FeedbackModalProps) {
   function openForm(type: 'Bug' | 'Feature') {
     trackFeedbackLinkTapped();
+    // pre-select the Type field via URL param (entry ID filled in after form creation)
     const typeValue = type === 'Bug' ? 'Bug+Report' : 'Feature+Request';
     Linking.openURL(`${FORM_URL}?entry.1372637109=${typeValue}`);
     onClose();

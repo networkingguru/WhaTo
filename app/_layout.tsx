@@ -56,6 +56,7 @@ export default function RootLayout() {
   useEffect(() => {
     function handleUrl(event: { url: string }) {
       const parsed = Linking.parse(event.url);
+      // URL format: whato://join/ABCD → parsed.path = "join/ABCD"
       if (parsed.path?.startsWith('join/')) {
         const code = parsed.path.split('/')[1];
         if (code) {
@@ -68,6 +69,8 @@ export default function RootLayout() {
     }
 
     const subscription = Linking.addEventListener('url', handleUrl);
+
+    // Handle initial URL (app opened from deep link)
     Linking.getInitialURL().then((url) => {
       if (url) handleUrl({ url });
     });
