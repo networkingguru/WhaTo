@@ -17,6 +17,7 @@ import {
   computeMatches,
   computeLiveMatches,
   hasHopelessParticipant,
+  getParticipantStatus,
   SessionData,
 } from '../../src/services/sessionService';
 
@@ -136,5 +137,32 @@ describe('hasHopelessParticipant', () => {
       user2: { name: 'Bob', joinedAt: 0, swipes: { a: true } },
     });
     expect(hasHopelessParticipant(session)).toBe(false);
+  });
+});
+
+describe('getParticipantStatus', () => {
+  it('returns "done" when completed is true, even if disconnected', () => {
+    expect(getParticipantStatus({ name: 'A', joinedAt: 0, completed: true, connected: false }))
+      .toBe('done');
+  });
+
+  it('returns "done" when completed is true and connected', () => {
+    expect(getParticipantStatus({ name: 'A', joinedAt: 0, completed: true, connected: true }))
+      .toBe('done');
+  });
+
+  it('returns "swiping" when connected and not completed', () => {
+    expect(getParticipantStatus({ name: 'A', joinedAt: 0, connected: true }))
+      .toBe('swiping');
+  });
+
+  it('returns "offline" when not connected and not completed', () => {
+    expect(getParticipantStatus({ name: 'A', joinedAt: 0, connected: false }))
+      .toBe('offline');
+  });
+
+  it('returns "offline" when connected is undefined', () => {
+    expect(getParticipantStatus({ name: 'A', joinedAt: 0 }))
+      .toBe('offline');
   });
 });

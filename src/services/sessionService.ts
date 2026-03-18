@@ -34,6 +34,33 @@ export interface MatchResult {
   majority: string[];
 }
 
+export type ParticipantStatus = 'done' | 'swiping' | 'offline';
+
+export function getParticipantStatus(participant: ParticipantData): ParticipantStatus {
+  if (participant.completed) return 'done';
+  if (participant.connected) return 'swiping';
+  return 'offline';
+}
+
+export async function setPresence(
+  code: string,
+  deviceId: string
+): Promise<() => void> {
+  const connectedRef = ref(database, `sessions/${code}/participants/${deviceId}/connected`);
+  const lastConnectedRef = ref(database, `sessions/${code}/participants/${deviceId}/lastConnected`);
+
+  await set(connectedRef, true);
+  await set(lastConnectedRef, Date.now());
+
+  const disconnectRef = onDisconnect(connectedRef);
+  await disconnectRef.set(false);
+
+  return () => {
+    disconnectRef.cancel();
+    set(connectedRef, false);
+  };
+}
+
 export function generateSessionCode(): string {
   const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ';
   let code = '';
@@ -256,12 +283,14 @@ export async function startNextRound(
   const session = snapshot.val() as SessionData;
   const currentRound = session.round ?? 1;
 
-  // Reset all participants' swipes and completed
+  // Reset swipes and completed, but preserve presence fields
   const resetParticipants: Record<string, ParticipantData> = {};
   for (const [pid, pdata] of Object.entries(session.participants)) {
     resetParticipants[pid] = {
       name: pdata.name,
       joinedAt: pdata.joinedAt,
+      connected: pdata.connected,
+      lastConnected: pdata.lastConnected,
     };
   }
 
