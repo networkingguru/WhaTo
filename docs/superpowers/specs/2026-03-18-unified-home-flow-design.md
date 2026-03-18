@@ -17,20 +17,20 @@
 ### Screen 1: Home (always the same — no mode state)
 
 - Light background (no purple/white switching)
-- Logo + tagline "What do you feel like?"
-- 3 topic buttons: Eat, Watch a Movie, Watch a Show (same styling as current)
-- "Join Session" button below topics — **same width/prominence** as topic buttons, outlined style with purple border
+- Logo (no tagline — the topic buttons ARE the question: "Eat?", "Watch?", "Stream?")
+- 3 topic buttons: Eat?, Watch?, Stream? (existing `topicDisplayNames` already use these labels)
+- "Join Group" button below topics — **same width/prominence** as topic buttons, outlined style with purple border
 - Sparkle button (support) stays in top-right
 - Feedback button stays at bottom
 
-**Removed:** Solo/Group mode toggle, "Group Mode" button, "Go Back" button
+**Removed:** Solo/Group mode toggle, "Group Mode" button, "Go Back" button, tagline text
 
 ### Screen 2: Mode Choice (new — shown after tapping a topic)
 
 - Light background
-- Topic icon + name at top (e.g. "🍴 Eat")
-- Subtitle: "How do you want to decide?"
-- **"Decide Together"** — primary button (filled purple). Subtitle: "Create a group session"
+- Topic icon + name at top (e.g. "🍴 Eat?")
+- No subtitle/tagline
+- **"Decide Together"** — primary button (filled purple). Subtitle: "Create a group"
 - **"Decide Solo"** — secondary button (outlined purple). Subtitle: "Swipe on your own"
 - **"Options"** link below — opens SearchOptions modal (food filters or media filters depending on topic)
 - **"← Back"** link returns to home
@@ -41,7 +41,7 @@ This screen replaces the mode toggle. Options are shared between both paths — 
 
 - Purple background (signals group context)
 - "Your display name" label + text input
-- "Create Session" button
+- "Create Group" button
 - Single "← Back" link below button, returns to mode-choice screen
 
 **Removed:** "Options" button (moved to mode-choice screen), duplicate back button at top
@@ -91,20 +91,45 @@ This screen replaces the mode toggle. Options are shared between both paths — 
 ### RadiusSelector and Pick Location:
 - These stay on the swipe screen — they are interactive features used during the swipe session, not pre-session configuration. Only the SearchOptions modal (cuisine types, sort order, genres) moves to mode-choice.
 
+## UI String Renames: "session" → "group"
+
+Replace user-facing "session" text with "group" across all screens. Code-level names (functions, variables, services) stay unchanged.
+
+| File | Old text | New text |
+|------|----------|----------|
+| `app/index.tsx` | "Join Session" | "Join Group" |
+| `app/index.tsx` | "Create Session" | "Create Group" |
+| `app/index.tsx` | "Creating session..." | "Creating group..." |
+| `app/index.tsx` | "Could not create session:" | "Could not create group:" |
+| `app/join.tsx` | "Join Session" (title) | "Join Group" |
+| `app/join.tsx` | "Session Code" (label) | "Group Code" |
+| `app/join.tsx` | "Please enter the session code and your name." | "Please enter the group code and your name." |
+| `app/lobby.tsx` | "Session: {code}" | "Group: {code}" |
+| `app/lobby.tsx` | "Join my session:" (SMS text) | "Join my group:" |
+| `app/lobby.tsx` | "Cancel Session" | "Cancel Group" |
+| `app/lobby.tsx` | "Leave Session" | "Leave Group" |
+| `app/group-swipe.tsx` | "End Session?" (alert title) | "End Group?" |
+| `app/group-swipe.tsx` | "This will end the session for everyone..." | "This will end the group for everyone..." |
+| `app/group-swipe.tsx` | "End Session" (alert button) | "End Group" |
+| `app/group-swipe.tsx` | "Loading session..." | "Loading group..." |
+| `app/group-result.tsx` | "starting a group session" (tip text) | "starting a group" |
+
 ## Files Changed
 
 | File | Change |
 |------|--------|
-| `app/index.tsx` | Rewrite state machine: remove mode toggle, add phase-based rendering with new mode-choice screen |
+| `app/index.tsx` | Rewrite state machine: remove mode toggle, add phase-based rendering with new mode-choice screen. Remove tagline. Rename session→group strings. |
 | `app/swipe.tsx` | Remove "Options" button from header, receive filter params from route instead |
+| `app/join.tsx` | Rename session→group in UI strings |
+| `app/lobby.tsx` | Rename session→group in UI strings |
+| `app/group-swipe.tsx` | Rename session→group in UI strings |
+| `app/group-result.tsx` | Rename session→group in tip text |
 
 ## Files NOT Changed
 
-- `app/lobby.tsx` — no changes (invite flow stays)
-- `app/group-swipe.tsx` — no changes
-- `app/join.tsx` — no changes (still navigated from home "Join Session")
 - `src/components/SearchOptions.tsx` — no changes (just rendered from different parent)
-- All other screens — no changes
+- `src/services/sessionService.ts` — code-level names stay as-is
+- `src/services/analytics.ts` — event names stay as-is (analytics events use snake_case internal names, not user-facing)
 
 ## Analytics Impact
 
@@ -115,7 +140,7 @@ This screen replaces the mode toggle. Options are shared between both paths — 
 
 - Home screen is always light background — no more purple state
 - Enter-name screen keeps purple background (group context indicator)
-- Join Session button uses outlined style: white background, purple border, purple text
+- Join Group button uses outlined style: white background, purple border, purple text
 - "Decide Together" is visually primary (filled purple)
 - "Decide Solo" is visually secondary (outlined purple)
 - "Options" is a text link, not a button
