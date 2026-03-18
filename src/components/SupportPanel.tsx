@@ -27,7 +27,7 @@ interface SupportPanelProps {
 const LINKS = [
   { label: 'Check out my books', url: 'https://www.amazon.com/stores/Brian-Hill/author/B001IXMPBK', icon: '📚' },
   { label: 'Listen to the podcast', url: 'https://finguptheineffable.podbean.com', icon: '🎙️' },
-  { label: 'Buy me a coffee', url: 'https://patreon.com/NetworkingGuru?utm_medium=unknown&utm_source=join_link&utm_campaign=creatorshare_creator&utm_content=copyLink', icon: '☕' },
+  { label: 'Buy me a coffee', url: 'https://ko-fi.com/networkingguru', icon: '☕' },
   { label: 'Watch me on YouTube', url: 'https://youtube.com/@brianondrumsyt?si=feBQ_mEwWGHRdNli', icon: '🎬' },
   { label: 'Rate & share the app', url: 'store-review', icon: '⭐' },
   { label: 'Privacy Policy', url: 'https://networkingguru.github.io/WhaTo/privacy-policy', icon: '🔒' },
