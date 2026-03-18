@@ -34,15 +34,23 @@ export default function SwipeScreen() {
   const [locationError, setLocationError] = useState<string | null>(null);
 
   // Filter state — initialize from route params if provided
-  const [foodFilters, setFoodFilters] = useState<FoodFilters>(() => ({
-    openNow: params.openNow !== undefined ? params.openNow === 'true' : true,
-    categories: params.categories ? JSON.parse(params.categories) : [],
-    sortBy: (params.sortBy as FoodFilters['sortBy']) ?? 'best_match',
-  }));
-  const [mediaFilters, setMediaFilters] = useState<MediaFilters>(() => ({
-    genreIds: params.genreIds ? JSON.parse(params.genreIds) : [],
-    sortTmdb: (params.sortTmdb as MediaFilters['sortTmdb']) ?? 'popularity',
-  }));
+  const [foodFilters, setFoodFilters] = useState<FoodFilters>(() => {
+    let categories: string[] = [];
+    try { if (params.categories) categories = JSON.parse(params.categories); } catch {}
+    return {
+      openNow: params.openNow !== undefined ? params.openNow === 'true' : true,
+      categories,
+      sortBy: (params.sortBy as FoodFilters['sortBy']) ?? 'best_match',
+    };
+  });
+  const [mediaFilters, setMediaFilters] = useState<MediaFilters>(() => {
+    let genreIds: number[] = [];
+    try { if (params.genreIds) genreIds = JSON.parse(params.genreIds); } catch {}
+    return {
+      genreIds,
+      sortTmdb: (params.sortTmdb as MediaFilters['sortTmdb']) ?? 'popularity',
+    };
+  });
 
   // Use picked location from location-picker if available
   React.useEffect(() => {
