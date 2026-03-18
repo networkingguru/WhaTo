@@ -8,7 +8,7 @@ Add a persistent participant status bar to the group-swipe screen showing other 
 
 ### Bottom Bar (ParticipantBar component)
 
-- Rendered between the SwipeDeck and the "← Nope / Yes! →" hints in `group-swipe.tsx`
+- Rendered between the SwipeDeck and the "← Nope / Yes! →" hints in `group-swipe.tsx` (above hints and attribution text)
 - Horizontal centered row of 24x24px colored circles, 4px gap
 - Each circle contains the participant's first initial in white bold text (10px)
 - The current user's own avatar is excluded — up to 7 others shown
@@ -19,14 +19,16 @@ Add a persistent participant status bar to the group-swipe screen showing other 
 | Status | Color | Hex | Priority |
 |--------|-------|-----|----------|
 | Done (completed all cards) | Green | `#4CAF50` | 1 (highest) |
-| Connected (swiping) | Blue | `#4A90D9` | 2 |
+| Connected (swiping) | Blue | `#4A90D9` (add as `colors.connected` in theme.ts) | 2 |
 | Disconnected | Red | `#FF4444` | 3 (lowest) |
 
-Priority determines which status to display when multiple could apply (e.g., completed + disconnected shows green).
+Priority determines which status to display when multiple could apply (e.g., a user who has completed swiping but then disconnects still shows green — completion is a permanent state that takes precedence).
+
+**Accessibility note:** The long-press tooltip provides a text fallback for color-only status indicators, ensuring usability for users with color vision deficiency.
 
 ### Long-Press Tooltip
 
-- Triggered by `onLongPress` (~300ms) on any avatar circle
+- Use `Pressable` with `onPressIn`/`onPressOut` (not `onLongPress`) for reliable release detection across platforms
 - Dark semi-transparent background (`rgba(45,45,45,0.9)`), rounded corners
 - Positioned above the pressed avatar
 - Content: `"{Name} — {status}"` (e.g., "Sarah — swiping", "Mike — done", "Kim — offline")
@@ -75,14 +77,15 @@ interface ParticipantData {
 ### Connecting (group-swipe mount)
 
 1. Write `connected: true` and `lastConnected: Date.now()` to participant node
-2. Register Firebase `onDisconnect()` handler on the `connected` field to set it to `false`
+2. Register Firebase `onDisconnect()` handler on the `connected` field to set it to `false` (import `onDisconnect` from `firebase/database` in `sessionService.ts` alongside existing imports)
 3. This leverages Firebase's server-side disconnect detection — if the client drops (app kill, network loss, phone sleep), Firebase sets `connected: false` automatically
 
 ### Reconnecting (app resume)
 
 - Listen to React Native `AppState` changes
-- On `active` state: re-write `connected: true`, re-register `onDisconnect()` handler
+- On `active` state: guard against redundant writes (skip if already `connected: true`), then re-write `connected: true`, re-register `onDisconnect()` handler
 - Handles cases where the app was backgrounded long enough for Firebase to trigger disconnect
+- AppState can fire rapid transitions (inactive → background → active) on iOS; the guard prevents unnecessary Firebase writes
 
 ### Cleanup (intentional exit)
 
@@ -102,6 +105,7 @@ interface ParticipantData {
 - **Session creator leaves:** Already handled by existing "End Session" flow. Presence reflects the disconnect naturally.
 - **Legend toast vs match banner:** If a match is found within the first 3 seconds, legend toast dismisses immediately. Match banner takes priority.
 - **Solo session (1 participant):** Bar renders empty since the user is excluded. No special handling needed.
+- **`startNextRound` must preserve presence fields:** The existing `startNextRound` in `sessionService.ts` reconstructs participant data with only `name` and `joinedAt`. It must be updated to also carry forward `connected` and `lastConnected` fields, otherwise all participants appear disconnected after a round transition.
 
 ## Files to Create/Modify
 
@@ -109,8 +113,8 @@ interface ParticipantData {
 |------|--------|
 | `src/components/ParticipantBar.tsx` | **Create** — avatar row + long-press tooltip |
 | `src/components/LegendToast.tsx` | **Create** — one-time intro legend overlay |
-| `src/services/sessionService.ts` | **Modify** — add presence write/disconnect helpers, update types |
-| `src/services/firebase.ts` | **Modify** — export `onDisconnect` from Firebase SDK |
+| `src/services/sessionService.ts` | **Modify** — add `onDisconnect` import from `firebase/database`, presence write/disconnect helpers, update types, update `startNextRound` to preserve presence fields |
+| `src/theme.ts` | **Modify** — add `connected: '#4A90D9'` to colors |
 | `app/group-swipe.tsx` | **Modify** — integrate ParticipantBar, LegendToast, presence lifecycle, AppState listener |
 
 ## Testing Strategy
