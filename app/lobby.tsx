@@ -35,7 +35,7 @@ export default function LobbyScreen() {
     return unsub;
   }, [code, isCreator, router]);
 
-  const participants = session?.participants ? Object.values(session.participants) : [];
+  const participants = session?.participants ? Object.entries(session.participants) : [];
 
   const handleInvite = useCallback(async () => {
     const isAvailable = await SMS.isAvailableAsync();
@@ -82,8 +82,10 @@ export default function LobbyScreen() {
         <Text style={styles.sectionTitle}>
           Participants ({participants.length}/8)
         </Text>
-        {participants.map((p, i) => (
-          <Text key={i} style={styles.participant}>{p.name}</Text>
+        {participants.map(([deviceId, p]) => (
+          <Text key={deviceId} style={styles.participant}>
+            {p.name}{deviceId === session?.createdBy ? ' 👑' : ''}
+          </Text>
         ))}
         {participants.length === 0 && (
           <ActivityIndicator color={colors.primary} style={{ marginTop: spacing.md }} />
