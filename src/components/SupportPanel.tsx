@@ -2,6 +2,7 @@ import React, { useEffect, useCallback } from 'react';
 import {
   View,
   Text,
+  Image,
   StyleSheet,
   Modal,
   TouchableOpacity,
@@ -105,6 +106,14 @@ export function SupportPanel({ visible, onClose }: SupportPanelProps) {
             >
               <Text style={styles.ornamentTop}>━━━ ✦ ━━━</Text>
 
+              <Image
+                source={{ uri: 'https://github.com/Networkingguru.png' }}
+                style={styles.authorPhoto}
+              />
+
+              <Text style={styles.message}>
+                Hi, I'm Brian Hill, designer of WhaTo.
+              </Text>
               <Text style={styles.message}>
                 I made this app because I was sick of this problem. I don't collect
                 your data, no ads, no tracking. Just a thing I built because I
@@ -192,6 +201,15 @@ const styles = StyleSheet.create({
   contentContainer: {
     padding: spacing.xl,
     paddingTop: spacing.lg,
+  },
+  authorPhoto: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    alignSelf: 'center',
+    marginBottom: spacing.md,
+    borderWidth: 2,
+    borderColor: '#D4A44C',
   },
   ornamentTop: {
     textAlign: 'center',

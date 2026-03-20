@@ -58,6 +58,10 @@ If we update this policy, we'll post the new version here with an updated effect
 
 If you have questions about this privacy policy, contact us at: **whato.feedback@gmail.com**
 
+## So How Do You Make Money?
+
+We don't. Greed is not everyone's motivator.
+
 ---
 
 *WhaTo is made with care and too much coffee by someone who just wanted to pick a restaurant.*
