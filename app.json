@@ -23,7 +23,7 @@
     "ios": {
       "supportsTablet": false,
       "bundleIdentifier": "com.whato.app",
-      "buildNumber": "1",
+      "buildNumber": "2",
       "infoPlist": {
         "NSLocationWhenInUseUsageDescription": "WhaTo uses your location to find nearby restaurants.",
         "ITSAppUsesNonExemptEncryption": false
