@@ -23,7 +23,8 @@
     "ios": {
       "supportsTablet": false,
       "bundleIdentifier": "com.whato.app",
-      "buildNumber": "2",
+      "googleServicesFile": "./GoogleService-Info.plist",
+      "buildNumber": "4",
       "infoPlist": {
         "NSLocationWhenInUseUsageDescription": "WhaTo uses your location to find nearby restaurants.",
         "ITSAppUsesNonExemptEncryption": false
