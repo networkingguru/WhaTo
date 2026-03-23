@@ -35,7 +35,7 @@ yarn-error.*
 .env*.local
 
 # Firebase
-GoogleService-Info.plist
+# GoogleService-Info.plist is tracked — it contains only public Firebase project config, no secrets
 
 # typescript
 *.tsbuildinfo
