@@ -1,23 +1,15 @@
 import React from 'react';
 import { TouchableOpacity, Text, StyleSheet } from 'react-native';
-import { ForkKnife, FilmSlate, Television } from 'phosphor-react-native';
 import { colors, spacing, typography, cardStyle } from '../theme';
-
-const ICON_MAP: Record<string, React.ComponentType<any>> = {
-  ForkKnife,
-  FilmSlate,
-  Television,
-};
 
 interface TopicButtonProps {
   label: string;
   color: string;
-  icon: string;
+  icon: React.ComponentType<any>;
   onPress: () => void;
 }
 
-export function TopicButton({ label, color, icon, onPress }: TopicButtonProps) {
-  const IconComponent = ICON_MAP[icon];
+export function TopicButton({ label, color, icon: IconComponent, onPress }: TopicButtonProps) {
   return (
     <TouchableOpacity
       style={[styles.button, { borderLeftColor: color, borderLeftWidth: 4 }]}

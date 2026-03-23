@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ActivityIndicator, Alert } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -14,26 +14,33 @@ import {
 } from '../src/services/sessionService';
 import { trackGroupSessionStarted } from '../src/services/analytics';
 import { logError } from '../src/services/crashlytics';
+import { Crown } from 'phosphor-react-native';
 
 export default function LobbyScreen() {
   const router = useRouter();
+  const routerRef = useRef(router);
+  routerRef.current = router;
   const params = useLocalSearchParams<{ code: string; topic: string; isCreator: string }>();
   const { code, topic, isCreator } = params;
   const [session, setSession] = useState<SessionData | null>(null);
+  const hasNavigated = useRef(false);
 
   useEffect(() => {
     if (!code) return;
+    hasNavigated.current = false;
     const unsub = listenToSession(code, (data) => {
       setSession(data);
-      if (data?.status === 'active' && isCreator !== 'true') {
-        router.replace({
-          pathname: '/group-swipe',
+      if (hasNavigated.current) return;
+      if ((data?.status === 'active' || data?.status === 'complete') && isCreator !== 'true') {
+        hasNavigated.current = true;
+        routerRef.current.replace({
+          pathname: data?.status === 'complete' ? '/group-result' : '/group-swipe',
           params: { code },
         });
       }
     });
     return unsub;
-  }, [code, isCreator, router]);
+  }, [code, isCreator]);
 
   const participants = session?.participants ? Object.entries(session.participants) : [];
 
@@ -83,9 +90,10 @@ export default function LobbyScreen() {
           Participants ({participants.length}/8)
         </Text>
         {participants.map(([deviceId, p]) => (
-          <Text key={deviceId} style={styles.participant}>
-            {p.name}{deviceId === session?.createdBy ? ' 👑' : ''}
-          </Text>
+          <View key={deviceId} style={styles.participantRow}>
+            <Text style={styles.participant}>{p.name}</Text>
+            {deviceId === session?.createdBy && <Crown size={18} color={colors.secondary} weight="fill" />}
+          </View>
         ))}
         {participants.length === 0 && (
           <ActivityIndicator color={colors.primary} style={{ marginTop: spacing.md }} />
@@ -145,11 +153,16 @@ const styles = StyleSheet.create({
     flex: 1,
     marginTop: spacing.xl,
   },
-  participant: {
-    ...typography.body,
+  participantRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
     paddingVertical: spacing.sm,
     borderBottomWidth: 1,
     borderBottomColor: colors.surface,
+  },
+  participant: {
+    ...typography.body,
   },
   actions: {
     paddingBottom: spacing.xl,

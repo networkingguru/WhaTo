@@ -12,7 +12,7 @@ import { FeedbackButton } from '../src/components/FeedbackButton';
 import { FeedbackModal } from '../src/components/FeedbackModal';
 import { colors, spacing, typography } from '../src/theme';
 import { Topic } from '../src/providers/types';
-import { topicDisplayNames, topicColors } from '../src/utils/topicLabels';
+import { topicDisplayNames, topicColors, topicIcons } from '../src/utils/topicLabels';
 import { getDeviceId } from '../src/services/deviceId';
 import { createSession, generateSessionCode } from '../src/services/sessionService';
 import { movieProvider } from '../src/providers/movieProvider';
@@ -22,14 +22,7 @@ import * as Location from 'expo-location';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { trackTopicSelected, trackGroupSessionCreated } from '../src/services/analytics';
 import { logError } from '../src/services/crashlytics';
-
 const DISPLAY_NAME_KEY = 'whato_display_name';
-
-const topicEmojis: Record<Topic, string> = {
-  food: '🍴',
-  movie: '🎬',
-  show: '📺',
-};
 
 export default function HomeScreen() {
   const router = useRouter();
@@ -159,6 +152,8 @@ export default function HomeScreen() {
 
   const isEnterNameOrCreating = phase === 'enter-name' || phase === 'creating';
 
+  const TopicIcon = selectedTopic ? topicIcons[selectedTopic] : null;
+
   return (
     <SafeAreaView style={[styles.container, isEnterNameOrCreating && styles.containerGroupMode]}>
       <View style={styles.sparkleContainer}>
@@ -189,19 +184,19 @@ export default function HomeScreen() {
             <TopicButton
               label={topicDisplayNames.food}
               color={topicColors.food}
-              icon="ForkKnife"
+              icon={topicIcons.food}
               onPress={() => handleTopicPress('food')}
             />
             <TopicButton
               label={topicDisplayNames.movie}
               color={topicColors.movie}
-              icon="FilmSlate"
+              icon={topicIcons.movie}
               onPress={() => handleTopicPress('movie')}
             />
             <TopicButton
               label={topicDisplayNames.show}
               color={topicColors.show}
-              icon="Television"
+              icon={topicIcons.show}
               onPress={() => handleTopicPress('show')}
             />
             <View style={styles.joinContainer}>
@@ -215,9 +210,12 @@ export default function HomeScreen() {
         {/* Phase: Choose Mode */}
         {phase === 'choose-mode' && selectedTopic && (
           <View style={styles.modeChoice}>
-            <Text style={styles.modeTopicTitle}>
-              {topicEmojis[selectedTopic]} {topicDisplayNames[selectedTopic]}
-            </Text>
+            <View style={styles.modeTopicHeader}>
+              {TopicIcon && <TopicIcon size={32} color={topicColors[selectedTopic]} weight="fill" />}
+              <Text style={styles.modeTopicTitle}>
+                {topicDisplayNames[selectedTopic]}
+              </Text>
+            </View>
             <TouchableOpacity
               style={styles.decideTogether}
               onPress={() => { trackTopicSelected(selectedTopic, 'group'); setPhase('enter-name'); }}
@@ -337,10 +335,15 @@ const styles = StyleSheet.create({
     gap: spacing.md,
     alignItems: 'center',
   },
+  modeTopicHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    marginBottom: spacing.md,
+  },
   modeTopicTitle: {
     ...typography.title,
     textAlign: 'center',
-    marginBottom: spacing.md,
   },
   decideTogether: {
     backgroundColor: colors.tertiary,

@@ -1,5 +1,6 @@
 import React from 'react';
 import { View, Text, StyleSheet, Modal, TouchableOpacity, Linking } from 'react-native';
+import { Bug, Lightbulb } from 'phosphor-react-native';
 import { colors, spacing, typography } from '../theme';
 import { trackFeedbackLinkTapped } from '../services/analytics';
 
@@ -27,7 +28,7 @@ export function FeedbackModal({ visible, onClose }: FeedbackModalProps) {
           <Text style={styles.subtitle}>Help us improve WhaTo</Text>
 
           <TouchableOpacity style={styles.option} onPress={() => openForm('Bug')}>
-            <Text style={styles.optionIcon}>🐛</Text>
+            <Bug size={28} color={colors.primary} weight="fill" />
             <View style={styles.optionText}>
               <Text style={styles.optionTitle}>Report a Bug</Text>
               <Text style={styles.optionDesc}>Something isn't working right</Text>
@@ -35,7 +36,7 @@ export function FeedbackModal({ visible, onClose }: FeedbackModalProps) {
           </TouchableOpacity>
 
           <TouchableOpacity style={styles.option} onPress={() => openForm('Feature')}>
-            <Text style={styles.optionIcon}>💡</Text>
+            <Lightbulb size={28} color={colors.primary} weight="fill" />
             <View style={styles.optionText}>
               <Text style={styles.optionTitle}>Request a Feature</Text>
               <Text style={styles.optionDesc}>Tell us what you'd like to see</Text>
@@ -82,10 +83,6 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     padding: spacing.md,
     marginBottom: spacing.md,
-  },
-  optionIcon: {
-    fontSize: 24,
-    marginRight: spacing.md,
   },
   optionText: {
     flex: 1,

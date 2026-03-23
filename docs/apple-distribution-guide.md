@@ -7,7 +7,7 @@
 - [x] iOS `buildNumber` added to app.json
 - [x] Location permission description in `infoPlist`
 - [x] `ITSAppUsesNonExemptEncryption: false` (avoids export compliance questionnaire)
-- [x] `eas.json` created with build profiles
+- [x] `eas.json` created with build profiles (including `appVersionSource: "local"` — required since EAS CLI v12)
 - [x] App name corrected to "WhaTo"
 - [x] Android `versionCode` added
 - [x] All code pushed to GitHub
@@ -25,6 +25,8 @@ npm install -g eas-cli
 eas login
 ```
 
+> **Note:** This guide assumes EAS CLI v16+. Run `eas --version` to check.
+
 ## Step 3: Link Your Expo Project (~1 min)
 
 ```bash
@@ -41,9 +43,17 @@ This registers the project with Expo and creates a project ID.
 3. Save
 4. Privacy policy will be live at: `https://networkingguru.github.io/WhaTo/privacy-policy`
 
-## Step 5: Update eas.json Submit Config (~2 min)
+## Step 5: Update eas.json Config (~2 min)
 
-Open `eas.json` and replace the three placeholders under `submit.production.ios`:
+### App Version Source (already configured)
+
+`eas.json` has `appVersionSource: "local"` in the `cli` section. This means version numbers come from your local `app.json` (`buildNumber`/`versionCode`). Combined with `autoIncrement: true` on the production profile, EAS increments these automatically on each build.
+
+> **Alternative:** `"remote"` stores versions on EAS servers instead — useful if multiple people build from different machines.
+
+### Submit Placeholders
+
+Replace the three placeholders under `submit.production.ios`:
 
 | Placeholder | Where to Find It |
 |-------------|-----------------|
@@ -102,18 +112,18 @@ Select the following data types:
 ## Step 8: Screenshots (~10 min)
 
 ### Required Sizes
-| Device | Resolution | Required? |
-|--------|-----------|-----------|
-| 6.7" (iPhone 15 Pro Max) | 1290 × 2796 | **Yes** |
-| 6.5" (iPhone 14 Plus) | 1284 × 2778 | **Yes** |
-| 5.5" (iPhone 8 Plus) | 1242 × 2208 | Recommended |
+| Display Size | Simulator Device | Resolution | Required? |
+|-------------|-----------------|-----------|-----------|
+| 6.9" | iPhone 17 Pro Max | 1260 × 2736 | **Yes** |
+
+Only one size is required. Apple auto-scales for all other display sizes (6.5", 6.3", 6.1", 5.5", etc).
 
 ### How to Get Screenshots
 
 **Option A: Xcode Simulator (easiest, no device needed)**
-1. After running `eas build`, or locally with `npx expo run:ios`
-2. Open Simulator → Device menu → choose the right device size
-3. Take screenshots with Cmd+S
+1. Boot the simulator: `xcrun simctl boot "iPhone 17 Pro Max"`
+2. Run the app: `npx expo run:ios`
+3. Take screenshots with Cmd+S (saved to Desktop)
 4. Capture 4-6 screens: home screen, mode-choice screen, swipe screen (food), group lobby, card detail, group results
 
 **Option B: Real Device**
@@ -126,7 +136,17 @@ Take screenshots on an actual iPhone and transfer them.
 
 Apple accepts both raw screenshots and framed mockups. Framed mockups with captions tend to convert better but are not required.
 
-## Step 9: Build for iOS (~15 min wait)
+## Step 9: Commit All Changes Before Building
+
+Since EAS CLI v15+, builds are archived via git. **Uncommitted changes will not be included in the build.** Make sure everything is committed:
+
+```bash
+git add -A && git commit -m "pre-build commit"
+```
+
+You can use `.easignore` (works like `.gitignore`) to exclude files from the build archive without affecting git.
+
+## Step 10: Build for iOS (~15 min wait)
 
 ```bash
 eas build --platform ios --profile production
@@ -134,7 +154,9 @@ eas build --platform ios --profile production
 
 EAS handles provisioning profiles and signing automatically. First build takes ~15 minutes. You'll be prompted to log in to your Apple account.
 
-## Step 10: Submit the Build (~2 min)
+> **Expo Go warning:** You may see "Detected that your app uses Expo Go for development." This is just a warning and won't prevent the build. To suppress it, set `EAS_BUILD_NO_EXPO_GO_WARNING=true` or install `expo-dev-client` (`npx expo install expo-dev-client`) for development builds that better mirror production behavior.
+
+## Step 11: Submit the Build (~2 min)
 
 ```bash
 eas submit --platform ios --profile production
@@ -142,7 +164,7 @@ eas submit --platform ios --profile production
 
 Or download the `.ipa` from EAS and upload through Apple's **Transporter** app.
 
-## Step 11: Submit for Review
+## Step 12: Submit for Review
 
 1. In App Store Connect, go to your app
 2. Under the new version, select the uploaded build

@@ -18,6 +18,7 @@ import Animated, {
   Easing,
 } from 'react-native-reanimated';
 import { LinearGradient } from 'expo-linear-gradient';
+import { Books, Microphone, Coffee, FilmSlate, Star, Lock, Heart, Sparkle } from 'phosphor-react-native';
 import { colors, spacing, typography } from '../theme';
 
 interface SupportPanelProps {
@@ -25,13 +26,13 @@ interface SupportPanelProps {
   onClose: () => void;
 }
 
-const LINKS = [
-  { label: 'Check out my books', url: 'https://www.amazon.com/stores/Brian-Hill/author/B001IXMPBK', icon: '📚' },
-  { label: 'Listen to the podcast', url: 'https://finguptheineffable.podbean.com', icon: '🎙️' },
-  { label: 'Buy me a coffee', url: 'https://ko-fi.com/networkingguru', icon: '☕' },
-  { label: 'Watch me on YouTube', url: 'https://youtube.com/@brianondrumsyt?si=feBQ_mEwWGHRdNli', icon: '🎬' },
-  { label: 'Rate & share the app', url: 'store-review', icon: '⭐' },
-  { label: 'Privacy Policy', url: 'https://networkingguru.github.io/WhaTo/privacy-policy', icon: '🔒' },
+const LINKS: { label: string; url: string; Icon: React.ComponentType<any> }[] = [
+  { label: 'Check out my books', url: 'https://www.amazon.com/stores/Brian-Hill/author/B001IXMPBK', Icon: Books },
+  { label: 'Listen to the podcast', url: 'https://finguptheineffable.podbean.com', Icon: Microphone },
+  { label: 'Buy me a coffee', url: 'https://ko-fi.com/networkingguru', Icon: Coffee },
+  { label: 'Watch me on YouTube', url: 'https://youtube.com/@brianondrumsyt?si=feBQ_mEwWGHRdNli', Icon: FilmSlate },
+  { label: 'Rate & share the app', url: 'store-review', Icon: Star },
+  { label: 'Privacy Policy', url: 'https://networkingguru.github.io/WhaTo/privacy-policy', Icon: Lock },
 ];
 
 const ROLL_DURATION = 500;
@@ -96,7 +97,11 @@ export function SupportPanel({ visible, onClose }: SupportPanelProps) {
               end={{ x: 1, y: 0 }}
               style={styles.headerGradient}
             >
-              <Text style={styles.headerText}>✨ A Humble Request ✨</Text>
+              <View style={styles.headerRow}>
+                <Sparkle size={20} color="#FFF" weight="fill" />
+                <Text style={styles.headerText}>A Humble Request</Text>
+                <Sparkle size={20} color="#FFF" weight="fill" />
+              </View>
             </LinearGradient>
 
             <ScrollView
@@ -133,16 +138,20 @@ export function SupportPanel({ visible, onClose }: SupportPanelProps) {
                   onPress={() => handleLink(link.url)}
                   activeOpacity={0.7}
                 >
-                  <Text style={styles.linkIcon}>{link.icon}</Text>
+                  <link.Icon size={22} color="#F5A623" weight="fill" />
                   <Text style={styles.linkText}>{link.label}</Text>
                 </TouchableOpacity>
               ))}
 
               <Text style={styles.ornamentBottom}>━━━ ✦ ━━━</Text>
 
+              <View style={styles.footerRow}>
+                <Text style={styles.footer}>Made with </Text>
+                <Heart size={14} color="#FF6B4A" weight="fill" />
+                <Text style={styles.footer}> and too much coffee</Text>
+              </View>
               <Text style={styles.footer}>
-                Made with ❤️ and too much coffee{'\n'}by a guy who just wanted to
-                pick a restaurant
+                by a guy who just wanted to pick a restaurant
               </Text>
             </ScrollView>
 
@@ -185,6 +194,11 @@ const styles = StyleSheet.create({
   headerGradient: {
     paddingVertical: spacing.lg,
     alignItems: 'center',
+  },
+  headerRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
   },
   headerText: {
     fontSize: 22,
@@ -251,15 +265,16 @@ const styles = StyleSheet.create({
     borderWidth: 1.5,
     borderColor: '#D4A44C',
   },
-  linkIcon: {
-    fontSize: 20,
-    marginRight: spacing.md,
-  },
   linkText: {
     ...typography.body,
     color: '#8B6914',
     fontWeight: '600',
     flex: 1,
+  },
+  footerRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   footer: {
     ...typography.caption,
