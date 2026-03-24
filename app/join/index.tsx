@@ -2,11 +2,11 @@ import React, { useState } from 'react';
 import { View, Text, StyleSheet, TextInput, TouchableOpacity, Alert, ActivityIndicator, KeyboardAvoidingView, Platform, Keyboard, TouchableWithoutFeedback } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { colors, spacing, typography } from '../src/theme';
-import { joinSession } from '../src/services/sessionService';
-import { getDeviceId } from '../src/services/deviceId';
-import { trackGroupSessionJoined } from '../src/services/analytics';
-import { logError } from '../src/services/crashlytics';
+import { colors, spacing, typography } from '../../src/theme';
+import { joinSession } from '../../src/services/sessionService';
+import { getDeviceId } from '../../src/services/deviceId';
+import { trackGroupSessionJoined } from '../../src/services/analytics';
+import { logError } from '../../src/services/crashlytics';
 
 export default function JoinScreen() {
   const router = useRouter();

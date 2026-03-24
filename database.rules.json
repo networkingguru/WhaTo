@@ -6,7 +6,7 @@
 
       "$code": {
         ".read": true,
-        ".write": "!data.exists()",
+        ".write": true,
         ".validate": "newData.hasChildren(['topic', 'status', 'createdBy', 'createdAt', 'cards', 'participants']) && $code.matches(/^[A-Z]{4}$/)",
 
         "topic": {
@@ -53,12 +53,12 @@
             "id": { ".validate": "newData.isString() && newData.val().length > 0 && newData.val().length <= 128" },
             "title": { ".validate": "newData.isString() && newData.val().length > 0 && newData.val().length <= 256" },
             "subtitle": { ".validate": "newData.isString() && newData.val().length <= 256" },
-            "imageUrl": { ".validate": "newData.isString() && newData.val().length <= 1024" },
-            "rating": { ".validate": "newData.isNumber()" },
+            "imageUrl": { ".validate": "newData.isString()" },
+            "rating": { ".validate": "newData.isNumber() || newData.val() === null" },
             "details": {
               "$i": { ".validate": "newData.isString() && newData.val().length <= 512" }
             },
-            "sourceUrl": { ".validate": "newData.isString() && newData.val().length <= 1024" },
+            "sourceUrl": { ".validate": "newData.isString()" },
             "meta": { ".validate": true }
           }
         },

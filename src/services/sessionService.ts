@@ -141,15 +141,27 @@ export async function createSession(
       },
     };
 
-    const { committed } = await runTransaction(sessionRef, (current) => {
-      if (current !== null) {
-        // Slot already taken — abort by returning undefined
-        return undefined;
-      }
-      return sessionData;
-    });
+    let committed = false;
+    try {
+      const txResult = await runTransaction(sessionRef, (current) => {
+        if (current !== null) {
+          return undefined;
+        }
+        return sessionData;
+      });
+      committed = txResult.committed;
+    } catch (txErr) {
+      console.warn(`[createSession] Transaction failed for code ${currentCode}:`, txErr);
+      throw txErr;
+    }
 
     if (committed) {
+      // Verify the write actually persisted
+      const verify = await get(sessionRef);
+      if (!verify.exists()) {
+        console.warn(`[createSession] Write appeared committed but data not found for ${currentCode}`);
+        throw new Error('Session creation failed — data not persisted');
+      }
       return currentCode;
     }
 
@@ -167,73 +179,92 @@ export async function joinSession(
 ): Promise<{ success: boolean; error?: string }> {
   const sessionRef = ref(getDb(), `sessions/${code}`);
 
-  // Pre-flight read for early rejection (avoids transaction overhead for obvious failures)
+  // Pre-flight read — confirms session exists and seeds the local cache
   const snapshot = await get(sessionRef);
   if (!snapshot.exists()) {
     return { success: false, error: 'Session not found' };
   }
+  const preflight = snapshot.val() as SessionData;
 
   const result: { success: boolean; error?: string } = { success: false, error: 'Transaction failed' };
 
+  try {
   await runTransaction(sessionRef, (current: SessionData | null) => {
     // Reset result on every invocation — Firebase may retry the callback on contention
     result.success = false;
     result.error = 'Transaction failed';
 
-    if (!current) {
+    // Firebase may pass null on first invocation if local cache is cold.
+    // Use pre-flight data as fallback since we confirmed it exists.
+    const session = current ?? preflight;
+    if (!session) {
       result.error = 'Session not found';
       return; // abort transaction
     }
 
-    if (isSessionExpired(current.createdAt)) {
+    if (isSessionExpired(session.createdAt)) {
       result.error = 'Session has expired';
       return;
     }
 
-    if (current.status === 'active') {
+    if (session.status === 'active') {
       result.error = 'Session already started';
       return;
     }
 
-    if (current.status === 'complete') {
+    if (session.status === 'complete') {
       result.error = 'Session has ended';
       return;
     }
 
-    const participantCount = Object.keys(current.participants || {}).length;
+    const participantCount = Object.keys(session.participants || {}).length;
     if (participantCount >= MAX_PARTICIPANTS) {
       result.error = 'Session is full (max 8 participants)';
       return;
     }
 
     // Add participant atomically
-    if (!current.participants) current.participants = {};
-    current.participants[deviceId] = {
+    if (!session.participants) session.participants = {};
+    session.participants[deviceId] = {
       name: displayName,
       joinedAt: Date.now(),
     };
 
     result.success = true;
     result.error = undefined;
-    return current;
+    return session;
   });
+  } catch (txErr) {
+    // Transaction rejected by server (e.g., validation rules)
+    if (result.success) {
+      // Callback said success but server rejected — likely a rules issue
+      result.success = false;
+      result.error = `Server rejected: ${txErr instanceof Error ? txErr.message : String(txErr)}`;
+    }
+  }
 
   return result;
 }
 
 export async function startSession(code: string): Promise<void> {
   const sessionRef = ref(getDb(), `sessions/${code}`);
+  const snap = await get(sessionRef);
+  const preflight = snap.exists() ? (snap.val() as SessionData) : null;
   await runTransaction(sessionRef, (current: SessionData | null) => {
-    if (!current || current.status !== 'waiting') return;
-    return { ...current, status: 'active' as const };
+    const session = current ?? preflight;
+    if (!session || session.status !== 'waiting') return;
+    return { ...session, status: 'active' as const };
   });
 }
 
 export async function endSession(code: string): Promise<void> {
   const sessionRef = ref(getDb(), `sessions/${code}`);
+  const snap = await get(sessionRef);
+  const preflight = snap.exists() ? (snap.val() as SessionData) : null;
   await runTransaction(sessionRef, (current: SessionData | null) => {
-    if (!current || current.status === 'complete') return;
-    return { ...current, status: 'complete' as const };
+    const session = current ?? preflight;
+    if (!session || session.status === 'complete') return;
+    return { ...session, status: 'complete' as const };
   });
 }
 
@@ -329,15 +360,18 @@ export async function startNextRound(
   matchedCards: CardItem[]
 ): Promise<void> {
   const sessionRef = ref(getDb(), `sessions/${code}`);
+  const snap = await get(sessionRef);
+  const preflight = snap.exists() ? (snap.val() as SessionData) : null;
 
   await runTransaction(sessionRef, (current: SessionData | null) => {
-    if (!current) return;
+    const session = current ?? preflight;
+    if (!session) return;
 
-    const currentRound = current.round ?? 1;
+    const currentRound = session.round ?? 1;
 
     // Reset swipes and completed, but preserve presence fields
     const resetParticipants: Record<string, ParticipantData> = {};
-    for (const [pid, pdata] of Object.entries(current.participants)) {
+    for (const [pid, pdata] of Object.entries(session.participants)) {
       resetParticipants[pid] = {
         name: pdata.name,
         joinedAt: pdata.joinedAt,
@@ -347,7 +381,7 @@ export async function startNextRound(
     }
 
     return {
-      ...current,
+      ...session,
       status: 'active' as const,
       cards: matchedCards,
       round: currentRound + 1,

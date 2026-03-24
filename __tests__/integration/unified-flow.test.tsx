@@ -316,7 +316,7 @@ describe('UI text: no user-facing "session" strings', () => {
     const path = require('path');
 
     const filesToCheck = [
-      'app/join.tsx',
+      'app/join/index.tsx',
       'app/lobby.tsx',
       'app/group-swipe.tsx',
       'app/group-result.tsx',
