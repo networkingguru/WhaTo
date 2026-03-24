@@ -1,4 +1,4 @@
-import { ref, set, get, onValue, update, onDisconnect, runTransaction } from 'firebase/database';
+import { ref, set, get, onValue, update, onDisconnect, runTransaction, remove, query, orderByChild, endAt } from 'firebase/database';
 import { getDb } from './firebase';
 import { CardItem, Topic } from '../providers/types';
 
@@ -112,6 +112,26 @@ export function computeMatches(
   return { unanimous, majority };
 }
 
+/**
+ * Delete sessions older than SESSION_TTL_MS. Runs fire-and-forget on group creation.
+ */
+async function cleanupExpiredSessions(): Promise<void> {
+  try {
+    const sessionsRef = ref(getDb(), 'sessions');
+    const cutoff = Date.now() - SESSION_TTL_MS;
+    const expiredQuery = query(sessionsRef, orderByChild('createdAt'), endAt(cutoff));
+    const snapshot = await get(expiredQuery);
+    if (!snapshot.exists()) return;
+
+    const expired = snapshot.val() as Record<string, unknown>;
+    await Promise.all(
+      Object.keys(expired).map((code) => remove(ref(getDb(), `sessions/${code}`)))
+    );
+  } catch {
+    // Best-effort cleanup — don't block session creation
+  }
+}
+
 export async function createSession(
   code: string,
   topic: Topic,
@@ -120,6 +140,9 @@ export async function createSession(
   cards: CardItem[],
   location?: { latitude: number; longitude: number; radiusMiles: number }
 ): Promise<string> {
+  // Fire-and-forget cleanup of expired sessions
+  cleanupExpiredSessions();
+
   const MAX_RETRIES = 5;
   let currentCode = code;
 

@@ -321,10 +321,12 @@ export default function GroupSwipeScreen() {
         </View>
       )}
 
-      {deckExhausted && !matchBanner ? (
+      {deckExhausted ? (
         <View style={styles.waitingContainer}>
           <Text style={styles.waitingText}>Out of cards!</Text>
-          <Text style={styles.waitingSubtext}>Waiting on the rest of the group to decide.</Text>
+          <Text style={styles.waitingSubtext}>
+            {matchBanner ? 'Match found — resolving now!' : 'Waiting on the rest of the group to decide.'}
+          </Text>
         </View>
       ) : (
         <SwipeDeck

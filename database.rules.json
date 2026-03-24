@@ -1,8 +1,9 @@
 {
   "rules": {
     "sessions": {
-      ".read": false,
+      ".read": "query.orderByChild == 'createdAt'",
       ".write": false,
+      ".indexOn": ["createdAt"],
 
       "$code": {
         ".read": true,
