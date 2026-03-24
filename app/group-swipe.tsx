@@ -23,7 +23,7 @@ import { logError } from '../src/services/crashlytics';
 import { ParticipantBar } from '../src/components/ParticipantBar';
 import { LegendToast } from '../src/components/LegendToast';
 
-const GRACE_PERIOD_MS = 30_000;
+const GRACE_PERIOD_S = 5;
 
 export default function GroupSwipeScreen() {
   const { code } = useLocalSearchParams<{ code: string }>();
@@ -33,7 +33,10 @@ export default function GroupSwipeScreen() {
   const [cards, setCards] = useState<CardItem[]>([]);
   const [round, setRound] = useState(1);
   const [matchBanner, setMatchBanner] = useState(false);
+  const [countdown, setCountdown] = useState(0);
+  const [deckExhausted, setDeckExhausted] = useState(false);
   const [detailCard, setDetailCard] = useState<CardItem | null>(null);
+  const countdownRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const sessionRef = useRef<SessionData | null>(null);
   const graceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const matchHandledRef = useRef(false);
@@ -97,7 +100,13 @@ export default function GroupSwipeScreen() {
         setCards([...data.cards]);
         cardsLoadedRef.current = true;
         setMatchBanner(false);
+        setCountdown(0);
+        setDeckExhausted(false);
         matchHandledRef.current = false;
+        if (countdownRef.current) {
+          clearInterval(countdownRef.current);
+          countdownRef.current = null;
+        }
         if (graceTimerRef.current) {
           clearTimeout(graceTimerRef.current);
           graceTimerRef.current = null;
@@ -145,10 +154,31 @@ export default function GroupSwipeScreen() {
   useEffect(() => {
     if (!session || !deviceId || matchHandledRef.current) return;
 
+    // Check if ALL participants are completed — end immediately
+    const participantIds = Object.keys(session.participants || {});
+    const allCompleted = participantIds.length > 0 && participantIds.every(
+      (pid) => session.participants[pid].completed
+    );
+    if (allCompleted) {
+      if (graceTimerRef.current) clearTimeout(graceTimerRef.current);
+      if (countdownRef.current) clearInterval(countdownRef.current);
+      const liveMatches = computeLiveMatches(session);
+      if (liveMatches.length > 0) {
+        handleMatchResolution(session, liveMatches);
+      } else {
+        matchHandledRef.current = true;
+        endSession(code!).then(() => {
+          router.replace({ pathname: '/group-result', params: { code } });
+        }).catch((err) => logError(err, 'group_all_completed'));
+      }
+      return;
+    }
+
     // Check for hopeless participant (exhausted cards, zero yes-swipes)
     if (hasHopelessParticipant(session)) {
       matchHandledRef.current = true;
       if (graceTimerRef.current) clearTimeout(graceTimerRef.current);
+      if (countdownRef.current) clearInterval(countdownRef.current);
       router.replace({ pathname: '/group-result', params: { code, failed: 'true' } });
       return;
     }
@@ -157,9 +187,22 @@ export default function GroupSwipeScreen() {
     const liveMatches = computeLiveMatches(session);
     if (liveMatches.length > 0 && !matchBanner) {
       setMatchBanner(true);
+      setCountdown(GRACE_PERIOD_S);
 
-      // Start grace timer — 30s for everyone to finish current card
+      // Countdown timer (ticks every second)
+      countdownRef.current = setInterval(() => {
+        setCountdown((prev) => {
+          if (prev <= 1) {
+            if (countdownRef.current) clearInterval(countdownRef.current);
+            return 0;
+          }
+          return prev - 1;
+        });
+      }, 1000);
+
+      // Grace timer — resolves after countdown
       graceTimerRef.current = setTimeout(() => {
+        if (countdownRef.current) clearInterval(countdownRef.current);
         const freshSession = sessionRef.current;
         if (freshSession) {
           const freshMatches = computeLiveMatches(freshSession);
@@ -167,14 +210,15 @@ export default function GroupSwipeScreen() {
         } else {
           handleMatchResolution(session, liveMatches);
         }
-      }, GRACE_PERIOD_MS);
+      }, GRACE_PERIOD_S * 1000);
     }
   }, [session, deviceId, matchBanner, handleMatchResolution, code, router]);
 
-  // Cleanup timer on unmount
+  // Cleanup timers on unmount
   useEffect(() => {
     return () => {
       if (graceTimerRef.current) clearTimeout(graceTimerRef.current);
+      if (countdownRef.current) clearInterval(countdownRef.current);
     };
   }, []);
 
@@ -202,17 +246,17 @@ export default function GroupSwipeScreen() {
   );
 
   const handleEmpty = useCallback(async () => {
+    setDeckExhausted(true);
     if (code && deviceId) {
       await markCompleted(code, deviceId);
     }
-    // Participant exhausted all cards. Match detection in the listener
-    // will handle hopeless participant check.
     // If match banner is already showing, resolve immediately.
     const freshSession = sessionRef.current;
     if (matchBanner && freshSession) {
       const liveMatches = computeLiveMatches(freshSession);
       if (liveMatches.length > 0) {
         if (graceTimerRef.current) clearTimeout(graceTimerRef.current);
+        if (countdownRef.current) clearInterval(countdownRef.current);
         handleMatchResolution(freshSession, liveMatches);
       }
     }
@@ -271,17 +315,26 @@ export default function GroupSwipeScreen() {
 
       {matchBanner && (
         <View style={styles.matchBanner}>
-          <Text style={styles.matchBannerText}>Match found! Wrapping up...</Text>
+          <Text style={styles.matchBannerText}>
+            Match found! {countdown > 0 ? `Wrapping up in ${countdown}...` : 'Resolving...'}
+          </Text>
         </View>
       )}
 
-      <SwipeDeck
-        cards={cards}
-        onSwipeRight={handleSwipeRight}
-        onSwipeLeft={handleSwipeLeft}
-        onEmpty={handleEmpty}
-        onTap={(card) => setDetailCard(card)}
-      />
+      {deckExhausted && !matchBanner ? (
+        <View style={styles.waitingContainer}>
+          <Text style={styles.waitingText}>Out of cards!</Text>
+          <Text style={styles.waitingSubtext}>Waiting on the rest of the group to decide.</Text>
+        </View>
+      ) : (
+        <SwipeDeck
+          cards={cards}
+          onSwipeRight={handleSwipeRight}
+          onSwipeLeft={handleSwipeLeft}
+          onEmpty={handleEmpty}
+          onTap={(card) => setDetailCard(card)}
+        />
+      )}
       {detailCard && (
         <CardDetail
           card={detailCard}
@@ -360,6 +413,24 @@ const styles = StyleSheet.create({
     ...typography.body,
     color: '#FFFFFF',
     fontWeight: '700',
+  },
+  waitingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: spacing.xl,
+  },
+  waitingText: {
+    ...typography.title,
+    color: colors.primary,
+    textAlign: 'center',
+  },
+  waitingSubtext: {
+    ...typography.body,
+    color: colors.textSecondary,
+    textAlign: 'center',
+    marginTop: spacing.md,
+    lineHeight: 24,
   },
   hints: {
     flexDirection: 'row',

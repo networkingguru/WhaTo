@@ -306,19 +306,19 @@ describe('GroupSwipeScreen', () => {
 
   // 6. Match banner
   describe('Match banner', () => {
-    it('shows "Match found! Wrapping up..." when live matches detected', async () => {
+    it('shows match found banner with countdown when live matches detected', async () => {
       const { getByText, queryByText } = render(<GroupSwipeScreen />);
       await flush();
 
       // First emit: no matches yet
       emitSession(makeSession());
-      expect(queryByText('Match found! Wrapping up...')).toBeNull();
+      expect(queryByText(/Match found!/)).toBeNull();
 
       // Now matches appear
       mockComputeLiveMatches.mockReturnValue(['c1']);
       emitSession(makeSession());
 
-      expect(getByText('Match found! Wrapping up...')).toBeTruthy();
+      expect(getByText(/Match found!/)).toBeTruthy();
     });
   });
 
@@ -433,14 +433,14 @@ describe('GroupSwipeScreen', () => {
       // Round 1: trigger match banner
       mockComputeLiveMatches.mockReturnValue(['c1']);
       emitSession(makeSession({ round: 1 }));
-      expect(getByText('Match found! Wrapping up...')).toBeTruthy();
+      expect(getByText(/Match found!/)).toBeTruthy();
 
       // Round 2: new cards, banner should reset
       mockComputeLiveMatches.mockReturnValue([]);
       const round2Cards = [makeCard('c1'), makeCard('c4')];
       emitSession(makeSession({ round: 2, cards: round2Cards }));
 
-      expect(queryByText('Match found! Wrapping up...')).toBeNull();
+      expect(queryByText(/Match found!/)).toBeNull();
       expect(getByText('cards:2')).toBeTruthy();
       expect(getByText(/Round 2/)).toBeTruthy();
     });

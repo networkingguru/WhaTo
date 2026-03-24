@@ -1,12 +1,15 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, TextInput, TouchableOpacity, Alert, ActivityIndicator, KeyboardAvoidingView, Platform, Keyboard, TouchableWithoutFeedback } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { colors, spacing, typography } from '../../src/theme';
 import { joinSession } from '../../src/services/sessionService';
 import { getDeviceId } from '../../src/services/deviceId';
 import { trackGroupSessionJoined } from '../../src/services/analytics';
 import { logError } from '../../src/services/crashlytics';
+
+const DISPLAY_NAME_KEY = 'whato_display_name';
 
 export default function JoinScreen() {
   const router = useRouter();
@@ -14,6 +17,12 @@ export default function JoinScreen() {
   const [code, setCode] = useState(params.code ?? '');
   const [name, setName] = useState('');
   const [joining, setJoining] = useState(false);
+
+  useEffect(() => {
+    AsyncStorage.getItem(DISPLAY_NAME_KEY).then((saved) => {
+      if (saved) setName(saved);
+    });
+  }, []);
 
   async function handleJoin() {
     if (!code.trim() || !name.trim()) {
@@ -24,9 +33,11 @@ export default function JoinScreen() {
     setJoining(true);
     try {
       const deviceId = await getDeviceId();
-      const result = await joinSession(code.trim().toUpperCase(), deviceId, name.trim().slice(0, 20));
+      const trimmedName = name.trim().slice(0, 20);
+      const result = await joinSession(code.trim().toUpperCase(), deviceId, trimmedName);
 
       if (result.success) {
+        await AsyncStorage.setItem(DISPLAY_NAME_KEY, trimmedName);
         trackGroupSessionJoined();
         router.replace({
           pathname: '/lobby',
