@@ -1,0 +1,27 @@
+const { withDangerousMod } = require("expo/config-plugins");
+const fs = require("fs");
+const path = require("path");
+
+module.exports = function withModularHeaders(config) {
+  return withDangerousMod(config, [
+    "ios",
+    async (config) => {
+      const podfilePath = path.join(
+        config.modRequest.platformProjectRoot,
+        "Podfile"
+      );
+      let podfile = fs.readFileSync(podfilePath, "utf8");
+
+      // Add use_modular_headers! at the top of the Podfile if not already present
+      if (!podfile.includes("use_modular_headers!")) {
+        podfile = podfile.replace(
+          /platform :ios/,
+          "use_modular_headers!\nplatform :ios"
+        );
+        fs.writeFileSync(podfilePath, podfile);
+      }
+
+      return config;
+    },
+  ]);
+};

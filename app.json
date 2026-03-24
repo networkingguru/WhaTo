@@ -15,7 +15,8 @@
     "plugins": [
       "expo-router",
       "@react-native-firebase/app",
-      "@react-native-firebase/crashlytics"
+      "@react-native-firebase/crashlytics",
+      "./plugins/withModularHeaders"
     ],
     "experiments": {
       "typedRoutes": true
@@ -24,7 +25,7 @@
       "supportsTablet": false,
       "bundleIdentifier": "com.whato.app",
       "googleServicesFile": "./GoogleService-Info.plist",
-      "buildNumber": "6",
+      "buildNumber": "7",
       "useFrameworks": "static",
       "infoPlist": {
         "NSLocationWhenInUseUsageDescription": "WhaTo uses your location to find nearby restaurants.",
