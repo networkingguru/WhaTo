@@ -257,6 +257,7 @@ const styles = StyleSheet.create({
   linkButton: {
     flexDirection: 'row',
     alignItems: 'center',
+    gap: 8,
     backgroundColor: '#FFF1D6',
     paddingVertical: spacing.md,
     paddingHorizontal: spacing.lg,

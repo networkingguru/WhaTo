@@ -8,7 +8,7 @@ import { colors, spacing, typography } from '../src/theme';
 
 export default function LocationPickerScreen() {
   const router = useRouter();
-  const params = useLocalSearchParams<{ latitude?: string; longitude?: string }>();
+  const params = useLocalSearchParams<{ latitude?: string; longitude?: string; openNow?: string; categories?: string; sortBy?: string; radius?: string }>();
 
   const initialLat = params.latitude ? parseFloat(params.latitude) : 37.7749;
   const initialLng = params.longitude ? parseFloat(params.longitude) : -122.4194;
@@ -43,12 +43,16 @@ export default function LocationPickerScreen() {
   }, [params.latitude]);
 
   function handleConfirm() {
-    router.navigate({
+    router.replace({
       pathname: '/swipe',
       params: {
         topic: 'food',
         pickedLatitude: selectedLocation.latitude.toString(),
         pickedLongitude: selectedLocation.longitude.toString(),
+        openNow: params.openNow ?? '',
+        categories: params.categories ?? '',
+        sortBy: params.sortBy ?? '',
+        radius: params.radius ?? '',
       },
     });
   }

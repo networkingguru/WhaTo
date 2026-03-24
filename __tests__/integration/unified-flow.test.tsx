@@ -52,7 +52,7 @@ jest.mock('phosphor-react-native', () => ({
 }));
 
 jest.mock('../../src/services/sessionService', () => ({
-  createSession: jest.fn(),
+  createSession: jest.fn().mockResolvedValue('ABCD'),
   generateSessionCode: jest.fn(() => 'ABCD'),
 }));
 

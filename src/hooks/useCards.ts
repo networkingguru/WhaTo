@@ -46,6 +46,7 @@ export function useCards(
     async function load() {
       setLoading(true);
       setError(null);
+      setCards([]);
 
       try {
         const provider = providers[topic];

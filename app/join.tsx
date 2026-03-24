@@ -24,7 +24,7 @@ export default function JoinScreen() {
     setJoining(true);
     try {
       const deviceId = await getDeviceId();
-      const result = await joinSession(code.trim().toUpperCase(), deviceId, name.trim());
+      const result = await joinSession(code.trim().toUpperCase(), deviceId, name.trim().slice(0, 20));
 
       if (result.success) {
         trackGroupSessionJoined();
@@ -66,6 +66,7 @@ export default function JoinScreen() {
               placeholderTextColor={colors.textSecondary}
               autoCapitalize="characters"
               autoCorrect={false}
+              maxLength={4}
             />
 
             <Text style={styles.label}>Your Name</Text>

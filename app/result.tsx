@@ -127,6 +127,7 @@ const styles = StyleSheet.create({
   linkText: {
     ...typography.body,
     fontWeight: '600',
+    color: '#FFFFFF',
   },
   restartButton: {
     backgroundColor: colors.primary,
@@ -137,5 +138,6 @@ const styles = StyleSheet.create({
   restartText: {
     ...typography.body,
     fontWeight: '700',
+    color: '#FFFFFF',
   },
 });

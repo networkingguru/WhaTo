@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, TextInput, Alert, ActivityIndicator, TouchableOpacity, Keyboard, TouchableWithoutFeedback } from 'react-native';
+import { View, Text, StyleSheet, TextInput, Alert, ActivityIndicator, TouchableOpacity, Keyboard, TouchableWithoutFeedback, KeyboardAvoidingView, Platform } from 'react-native';
 import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import * as Device from 'expo-device';
@@ -137,12 +137,12 @@ export default function HomeScreen() {
         ? { latitude: fetchOptions.latitude, longitude: fetchOptions.longitude!, radiusMiles: 5 }
         : undefined;
 
-      const trimmedName = displayName.trim();
+      const trimmedName = displayName.trim().slice(0, 20);
       await AsyncStorage.setItem(DISPLAY_NAME_KEY, trimmedName);
-      await createSession(code, selectedTopic, deviceId, trimmedName, cards, location);
+      const finalCode = await createSession(code, selectedTopic, deviceId, trimmedName, cards, location);
       trackGroupSessionCreated(selectedTopic);
       resetToHome();
-      router.push({ pathname: '/lobby', params: { code, topic: selectedTopic, isCreator: 'true' } });
+      router.push({ pathname: '/lobby', params: { code: finalCode, topic: selectedTopic, isCreator: 'true' } });
     } catch (err) {
       logError(err, 'handleCreateGroup');
       Alert.alert('Error', `Could not create group: ${err instanceof Error ? err.message : 'Unknown error'}`);
@@ -177,7 +177,10 @@ export default function HomeScreen() {
         <Logo />
       </View>
 
-      <View style={styles.buttons}>
+      <KeyboardAvoidingView
+        style={[styles.buttons, isEnterNameOrCreating && styles.buttonsTopAligned]}
+        behavior={isEnterNameOrCreating ? (Platform.OS === 'ios' ? 'padding' : 'height') : undefined}
+      >
         {/* Phase: Home — topic buttons + Join Group */}
         {phase === 'home' && (
           <>
@@ -272,7 +275,7 @@ export default function HomeScreen() {
             </Text>
           </View>
         )}
-      </View>
+      </KeyboardAvoidingView>
 
       <View style={styles.feedbackContainer}>
         <FeedbackButton onPress={() => setFeedbackVisible(true)} />
@@ -309,6 +312,9 @@ const styles = StyleSheet.create({
     flex: 2,
     justifyContent: 'center',
     alignItems: 'center',
+  },
+  buttonsTopAligned: {
+    justifyContent: 'flex-start',
   },
   joinContainer: {
     marginTop: spacing.xl,
@@ -403,6 +409,7 @@ const styles = StyleSheet.create({
     width: '100%',
     gap: spacing.md,
     alignItems: 'center',
+    paddingTop: spacing.xl,
   },
   groupTitle: {
     ...typography.subtitle,

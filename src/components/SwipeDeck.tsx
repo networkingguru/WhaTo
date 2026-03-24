@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { View, StyleSheet, Dimensions, Text } from 'react-native';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import Animated, {
@@ -27,6 +27,8 @@ interface SwipeDeckProps {
 
 export function SwipeDeck({ cards, onSwipeRight, onSwipeLeft, onEmpty, onTap }: SwipeDeckProps) {
   const [currentIndex, setCurrentIndex] = useState(0);
+  const currentIndexRef = useRef(currentIndex);
+  currentIndexRef.current = currentIndex;
   const translateX = useSharedValue(0);
   const translateY = useSharedValue(0);
   const cardOpacity = useSharedValue(1);
@@ -35,9 +37,22 @@ export function SwipeDeck({ cards, onSwipeRight, onSwipeLeft, onEmpty, onTap }: 
   const nextCard = cards[currentIndex + 1];
 
   useEffect(() => {
-    if (currentIndex >= cards.length) {
+    setCurrentIndex(0);
+    currentIndexRef.current = 0;
+  }, [cards]);
+
+  const emptyFiredRef = useRef(false);
+
+  useEffect(() => {
+    // Reset when cards change (new round)
+    emptyFiredRef.current = false;
+  }, [cards]);
+
+  useEffect(() => {
+    if (currentIndex >= cards.length && !emptyFiredRef.current) {
+      emptyFiredRef.current = true;
       onEmpty();
-    } else {
+    } else if (currentIndex < cards.length) {
       // Show card after React renders the new card (prevents blink)
       cardOpacity.value = 1;
     }
@@ -48,7 +63,7 @@ export function SwipeDeck({ cards, onSwipeRight, onSwipeLeft, onEmpty, onTap }: 
 
   const advanceCard = useCallback(
     (direction: 'left' | 'right') => {
-      const card = cards[currentIndex];
+      const card = cards[currentIndexRef.current];
       if (!card) return;
 
       if (direction === 'right') {
@@ -59,9 +74,10 @@ export function SwipeDeck({ cards, onSwipeRight, onSwipeLeft, onEmpty, onTap }: 
       cardOpacity.value = 0;
       translateX.value = 0;
       translateY.value = 0;
+      currentIndexRef.current += 1;
       setCurrentIndex((i) => i + 1);
     },
-    [currentIndex, cards, onSwipeRight, onSwipeLeft, translateX, translateY]
+    [cards, onSwipeRight, onSwipeLeft, translateX, translateY, cardOpacity]
   );
 
   const panGesture = Gesture.Pan()
@@ -84,8 +100,9 @@ export function SwipeDeck({ cards, onSwipeRight, onSwipeLeft, onEmpty, onTap }: 
     });
 
   const tapGesture = Gesture.Tap().onEnd(() => {
-    if (onTap && cards[currentIndex]) {
-      runOnJS(onTap)(cards[currentIndex]);
+    const card = cards[currentIndexRef.current];
+    if (onTap && card) {
+      runOnJS(onTap)(card);
     }
   });
 

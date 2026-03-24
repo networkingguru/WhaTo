@@ -79,6 +79,7 @@ const styles = StyleSheet.create({
   option: {
     flexDirection: 'row',
     alignItems: 'center',
+    gap: 12,
     backgroundColor: colors.surface,
     borderRadius: 12,
     padding: spacing.md,

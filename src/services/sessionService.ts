@@ -1,4 +1,4 @@
-import { ref, set, get, onValue, update, onDisconnect } from 'firebase/database';
+import { ref, set, get, onValue, update, onDisconnect, runTransaction } from 'firebase/database';
 import { getDb } from './firebase';
 import { CardItem, Topic } from '../providers/types';
 
@@ -119,23 +119,45 @@ export async function createSession(
   displayName: string,
   cards: CardItem[],
   location?: { latitude: number; longitude: number; radiusMiles: number }
-): Promise<void> {
-  const sessionRef = ref(getDb(), `sessions/${code}`);
-  const sessionData: SessionData = {
-    topic,
-    status: 'waiting',
-    createdBy: deviceId,
-    createdAt: Date.now(),
-    ...(location && { location }),
-    cards,
-    participants: {
-      [deviceId]: {
-        name: displayName,
-        joinedAt: Date.now(),
+): Promise<string> {
+  const MAX_RETRIES = 5;
+  let currentCode = code;
+
+  for (let attempt = 0; attempt < MAX_RETRIES; attempt++) {
+    const sessionRef = ref(getDb(), `sessions/${currentCode}`);
+
+    const sessionData: SessionData = {
+      topic,
+      status: 'waiting',
+      createdBy: deviceId,
+      createdAt: Date.now(),
+      ...(location && { location }),
+      cards,
+      participants: {
+        [deviceId]: {
+          name: displayName,
+          joinedAt: Date.now(),
+        },
       },
-    },
-  };
-  await set(sessionRef, sessionData);
+    };
+
+    const { committed } = await runTransaction(sessionRef, (current) => {
+      if (current !== null) {
+        // Slot already taken — abort by returning undefined
+        return undefined;
+      }
+      return sessionData;
+    });
+
+    if (committed) {
+      return currentCode;
+    }
+
+    // Slot was taken; generate a new code and retry
+    currentCode = generateSessionCode();
+  }
+
+  throw new Error('Failed to generate a unique session code after multiple attempts');
 }
 
 export async function joinSession(
@@ -144,45 +166,75 @@ export async function joinSession(
   displayName: string
 ): Promise<{ success: boolean; error?: string }> {
   const sessionRef = ref(getDb(), `sessions/${code}`);
-  const snapshot = await get(sessionRef);
 
+  // Pre-flight read for early rejection (avoids transaction overhead for obvious failures)
+  const snapshot = await get(sessionRef);
   if (!snapshot.exists()) {
     return { success: false, error: 'Session not found' };
   }
 
-  const session = snapshot.val() as SessionData;
+  const result: { success: boolean; error?: string } = { success: false, error: 'Transaction failed' };
 
-  if (isSessionExpired(session.createdAt)) {
-    return { success: false, error: 'Session has expired' };
-  }
+  await runTransaction(sessionRef, (current: SessionData | null) => {
+    // Reset result on every invocation — Firebase may retry the callback on contention
+    result.success = false;
+    result.error = 'Transaction failed';
 
-  if (session.status === 'active') {
-    return { success: false, error: 'Session already started' };
-  }
+    if (!current) {
+      result.error = 'Session not found';
+      return; // abort transaction
+    }
 
-  if (session.status === 'complete') {
-    return { success: false, error: 'Session has ended' };
-  }
+    if (isSessionExpired(current.createdAt)) {
+      result.error = 'Session has expired';
+      return;
+    }
 
-  const participantCount = Object.keys(session.participants || {}).length;
-  if (participantCount >= MAX_PARTICIPANTS) {
-    return { success: false, error: 'Session is full (max 8 participants)' };
-  }
+    if (current.status === 'active') {
+      result.error = 'Session already started';
+      return;
+    }
 
-  await update(ref(getDb(), `sessions/${code}/participants/${deviceId}`), {
-    name: displayName,
-    joinedAt: Date.now(),
+    if (current.status === 'complete') {
+      result.error = 'Session has ended';
+      return;
+    }
+
+    const participantCount = Object.keys(current.participants || {}).length;
+    if (participantCount >= MAX_PARTICIPANTS) {
+      result.error = 'Session is full (max 8 participants)';
+      return;
+    }
+
+    // Add participant atomically
+    if (!current.participants) current.participants = {};
+    current.participants[deviceId] = {
+      name: displayName,
+      joinedAt: Date.now(),
+    };
+
+    result.success = true;
+    result.error = undefined;
+    return current;
   });
 
-  return { success: true };
+  return result;
 }
 
 export async function startSession(code: string): Promise<void> {
-  await update(ref(getDb(), `sessions/${code}`), { status: 'active' });
+  const sessionRef = ref(getDb(), `sessions/${code}`);
+  await runTransaction(sessionRef, (current: SessionData | null) => {
+    if (!current || current.status !== 'waiting') return;
+    return { ...current, status: 'active' as const };
+  });
 }
 
 export async function endSession(code: string): Promise<void> {
-  await update(ref(getDb(), `sessions/${code}`), { status: 'complete' });
+  const sessionRef = ref(getDb(), `sessions/${code}`);
+  await runTransaction(sessionRef, (current: SessionData | null) => {
+    if (!current || current.status === 'complete') return;
+    return { ...current, status: 'complete' as const };
+  });
 }
 
 export async function recordSwipe(
@@ -277,26 +329,29 @@ export async function startNextRound(
   matchedCards: CardItem[]
 ): Promise<void> {
   const sessionRef = ref(getDb(), `sessions/${code}`);
-  const snapshot = await get(sessionRef);
-  if (!snapshot.exists()) return;
 
-  const session = snapshot.val() as SessionData;
-  const currentRound = session.round ?? 1;
+  await runTransaction(sessionRef, (current: SessionData | null) => {
+    if (!current) return;
 
-  // Reset swipes and completed, but preserve presence fields
-  const resetParticipants: Record<string, ParticipantData> = {};
-  for (const [pid, pdata] of Object.entries(session.participants)) {
-    resetParticipants[pid] = {
-      name: pdata.name,
-      joinedAt: pdata.joinedAt,
-      connected: pdata.connected,
-      lastConnected: pdata.lastConnected,
+    const currentRound = current.round ?? 1;
+
+    // Reset swipes and completed, but preserve presence fields
+    const resetParticipants: Record<string, ParticipantData> = {};
+    for (const [pid, pdata] of Object.entries(current.participants)) {
+      resetParticipants[pid] = {
+        name: pdata.name,
+        joinedAt: pdata.joinedAt,
+        connected: pdata.connected,
+        lastConnected: pdata.lastConnected,
+      };
+    }
+
+    return {
+      ...current,
+      status: 'active' as const,
+      cards: matchedCards,
+      round: currentRound + 1,
+      participants: resetParticipants,
     };
-  }
-
-  await update(sessionRef, {
-    cards: matchedCards,
-    round: currentRound + 1,
-    participants: resetParticipants,
   });
 }

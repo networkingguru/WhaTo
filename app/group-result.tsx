@@ -49,6 +49,11 @@ export default function GroupResultScreen() {
     return { unanimousCards: unanimous, majorityCards: majority, hasMatches: unanimous.length > 0 || majority.length > 0 };
   }, [session, isFailed]);
 
+  const topVotedCards = useMemo(() => {
+    if (!session || hasMatches) return [];
+    return getTopVotedCards(session);
+  }, [session, hasMatches]);
+
   // Fire analytics once when session loads
   const trackedRef = useRef(false);
   useEffect(() => {
@@ -119,10 +124,10 @@ export default function GroupResultScreen() {
           </View>
         )}
 
-        {!hasMatches && (
+        {!hasMatches && topVotedCards.length > 0 && (
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>Top voted</Text>
-            {getTopVotedCards(session).map((card) => (
+            {topVotedCards.map((card) => (
               <ResultCard key={card.id} card={card} />
             ))}
           </View>

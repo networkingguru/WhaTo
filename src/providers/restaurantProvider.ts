@@ -22,7 +22,7 @@ function mapYelpBusiness(biz: YelpBusiness): CardItem {
     subtitle: cuisine,
     imageUrl: biz.image_url || null,
     rating: biz.rating,
-    details: [cuisine, biz.price ?? '', address].filter(Boolean),
+    details: [biz.price ?? '', address].filter(Boolean),
     sourceUrl: biz.url,
     meta: { source: 'yelp' },
   };

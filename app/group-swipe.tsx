@@ -34,6 +34,7 @@ export default function GroupSwipeScreen() {
   const [round, setRound] = useState(1);
   const [matchBanner, setMatchBanner] = useState(false);
   const [detailCard, setDetailCard] = useState<CardItem | null>(null);
+  const sessionRef = useRef<SessionData | null>(null);
   const graceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const matchHandledRef = useRef(false);
   const cardsLoadedRef = useRef(false);
@@ -63,6 +64,10 @@ export default function GroupSwipeScreen() {
 
     const subscription = AppState.addEventListener('change', (state) => {
       if (state === 'active') {
+        if (presenceCleanupRef.current) {
+          presenceCleanupRef.current();
+          presenceCleanupRef.current = null;
+        }
         isConnectedRef.current = false;
         connectPresence();
       }
@@ -83,6 +88,7 @@ export default function GroupSwipeScreen() {
     if (!code) return;
     const unsub = listenToSession(code, (data) => {
       setSession(data);
+      sessionRef.current = data;
 
       // Detect round change — reload cards
       const dataRound = data?.round ?? 1;
@@ -109,38 +115,7 @@ export default function GroupSwipeScreen() {
     return unsub;
   }, [code, router, round]);
 
-  // Real-time match detection
-  useEffect(() => {
-    if (!session || !deviceId || matchHandledRef.current) return;
-
-    // Check for hopeless participant (exhausted cards, zero yes-swipes)
-    if (hasHopelessParticipant(session)) {
-      matchHandledRef.current = true;
-      if (graceTimerRef.current) clearTimeout(graceTimerRef.current);
-      router.replace({ pathname: '/group-result', params: { code, failed: 'true' } });
-      return;
-    }
-
-    // Check for live unanimous matches
-    const liveMatches = computeLiveMatches(session);
-    if (liveMatches.length > 0 && !matchBanner) {
-      setMatchBanner(true);
-
-      // Start grace timer — 30s for everyone to finish current card
-      graceTimerRef.current = setTimeout(() => {
-        handleMatchResolution(session, liveMatches);
-      }, GRACE_PERIOD_MS);
-    }
-  }, [session, deviceId, matchBanner]);
-
-  // Cleanup timer on unmount
-  useEffect(() => {
-    return () => {
-      if (graceTimerRef.current) clearTimeout(graceTimerRef.current);
-    };
-  }, []);
-
-  function handleMatchResolution(sess: SessionData, matchIds: string[]) {
+  const handleMatchResolution = useCallback((sess: SessionData, matchIds: string[]) => {
     if (matchHandledRef.current) return;
     matchHandledRef.current = true;
 
@@ -164,7 +139,44 @@ export default function GroupSwipeScreen() {
         router.replace({ pathname: '/group-result', params: { code } });
       }).catch((err) => logError(err, 'group_end_session_no_match'));
     }
-  }
+  }, [code, router]);
+
+  // Real-time match detection
+  useEffect(() => {
+    if (!session || !deviceId || matchHandledRef.current) return;
+
+    // Check for hopeless participant (exhausted cards, zero yes-swipes)
+    if (hasHopelessParticipant(session)) {
+      matchHandledRef.current = true;
+      if (graceTimerRef.current) clearTimeout(graceTimerRef.current);
+      router.replace({ pathname: '/group-result', params: { code, failed: 'true' } });
+      return;
+    }
+
+    // Check for live unanimous matches
+    const liveMatches = computeLiveMatches(session);
+    if (liveMatches.length > 0 && !matchBanner) {
+      setMatchBanner(true);
+
+      // Start grace timer — 30s for everyone to finish current card
+      graceTimerRef.current = setTimeout(() => {
+        const freshSession = sessionRef.current;
+        if (freshSession) {
+          const freshMatches = computeLiveMatches(freshSession);
+          handleMatchResolution(freshSession, freshMatches.length > 0 ? freshMatches : liveMatches);
+        } else {
+          handleMatchResolution(session, liveMatches);
+        }
+      }, GRACE_PERIOD_MS);
+    }
+  }, [session, deviceId, matchBanner, handleMatchResolution, code, router]);
+
+  // Cleanup timer on unmount
+  useEffect(() => {
+    return () => {
+      if (graceTimerRef.current) clearTimeout(graceTimerRef.current);
+    };
+  }, []);
 
   const handleSwipe = useCallback(
     async (card: CardItem, liked: boolean) => {
@@ -189,21 +201,22 @@ export default function GroupSwipeScreen() {
     [handleSwipe]
   );
 
-  const handleEmpty = useCallback(() => {
+  const handleEmpty = useCallback(async () => {
     if (code && deviceId) {
-      markCompleted(code, deviceId);
+      await markCompleted(code, deviceId);
     }
     // Participant exhausted all cards. Match detection in the listener
     // will handle hopeless participant check.
     // If match banner is already showing, resolve immediately.
-    if (matchBanner && session) {
-      const liveMatches = computeLiveMatches(session);
+    const freshSession = sessionRef.current;
+    if (matchBanner && freshSession) {
+      const liveMatches = computeLiveMatches(freshSession);
       if (liveMatches.length > 0) {
         if (graceTimerRef.current) clearTimeout(graceTimerRef.current);
-        handleMatchResolution(session, liveMatches);
+        handleMatchResolution(freshSession, liveMatches);
       }
     }
-  }, [matchBanner, session, code, deviceId]);
+  }, [matchBanner, code, deviceId, handleMatchResolution]);
 
   const isCreator = session?.createdBy === deviceId;
 

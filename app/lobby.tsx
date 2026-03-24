@@ -82,7 +82,7 @@ export default function LobbyScreen() {
     <SafeAreaView style={styles.container}>
       <Text style={styles.title}>Group: {code}</Text>
       <Text style={styles.subtitle}>
-        WhaTo... {topicDisplayNames[topic as Topic] ?? topic}
+        WhaTo... {topicDisplayNames[(session?.topic ?? topic) as Topic] ?? topic}
       </Text>
 
       <View style={styles.participantList}>

@@ -12,8 +12,9 @@ export function StarRating({ rating, size = 16, color = '#F5A623' }: StarRatingP
   if (rating == null) return null;
 
   const clamped = Math.max(0, Math.min(5, rating));
-  const fullStars = Math.floor(clamped);
-  const hasHalf = clamped - fullStars >= 0.25 && clamped - fullStars < 0.75;
+  const remainder = clamped - Math.floor(clamped);
+  const fullStars = Math.floor(clamped) + (remainder >= 0.75 ? 1 : 0);
+  const hasHalf = remainder >= 0.25 && remainder < 0.75;
   const emptyStars = 5 - fullStars - (hasHalf ? 1 : 0);
 
   return (

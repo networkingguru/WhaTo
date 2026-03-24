@@ -24,10 +24,14 @@ export default function SwipeScreen() {
     sortBy?: string;
     genreIds?: string;
     sortTmdb?: string;
+    radius?: string;
   }>();
   const topic = params.topic as Topic;
   const router = useRouter();
-  const [radius, setRadius] = useState(5);
+  const [radius, setRadius] = useState(() => {
+    const r = params.radius ? parseInt(params.radius, 10) : NaN;
+    return isNaN(r) ? 5 : r;
+  });
   const [detailCard, setDetailCard] = useState<CardItem | null>(null);
   const [location, setLocation] = useState<{ latitude: number; longitude: number } | undefined>();
   const [locationLoading, setLocationLoading] = useState(topic === 'food');
@@ -179,7 +183,15 @@ export default function SwipeScreen() {
         <>
           <RadiusSelector selected={radius} onSelect={setRadius} />
           <Pressable
-            onPress={() => router.push({ pathname: '/location-picker', params: { topic } })}
+            onPress={() => router.push({ pathname: '/location-picker', params: {
+              topic,
+              latitude: location?.latitude?.toString() ?? '',
+              longitude: location?.longitude?.toString() ?? '',
+              openNow: String(foodFilters.openNow),
+              categories: foodFilters.categories.length > 0 ? JSON.stringify(foodFilters.categories) : '',
+              sortBy: foodFilters.sortBy,
+              radius: String(radius),
+            } })}
             style={styles.pickLocationButton}
           >
             <Text style={styles.pickLocationText}>Pick location</Text>

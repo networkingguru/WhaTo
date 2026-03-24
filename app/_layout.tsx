@@ -1,5 +1,5 @@
 import React, { useEffect } from 'react';
-import { View, Text } from 'react-native';
+import { View, Text, TouchableOpacity } from 'react-native';
 import { Stack, useRouter, usePathname } from 'expo-router';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { StatusBar } from 'expo-status-bar';
@@ -29,8 +29,14 @@ class AppErrorBoundary extends React.Component<
       return (
         <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#fff' }}>
           <Text style={{ fontSize: 18, color: '#333', textAlign: 'center', paddingHorizontal: 32 }}>
-            Something went wrong. Please restart the app.
+            Something went wrong.
           </Text>
+          <TouchableOpacity
+            onPress={() => this.setState({ hasError: false })}
+            style={{ marginTop: 24, backgroundColor: '#FF6B4A', paddingVertical: 12, paddingHorizontal: 32, borderRadius: 12 }}
+          >
+            <Text style={{ fontSize: 16, color: '#fff', fontWeight: '600' }}>Try Again</Text>
+          </TouchableOpacity>
         </View>
       );
     }
